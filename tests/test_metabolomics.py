@@ -215,3 +215,55 @@ def test_shacl_shapes_returns_independent_graphs(adapter):
     assert sentinel not in g2, (
         "shacl_shapes() must return independent Graphs — mutating one affected the other"
     )
+
+
+def test_shacl_shapes_fires_on_enriched_claims_graph(adapter):
+    """The metabolomics shapes must produce a Warning when a claim has a malformed
+    ontology_term CURIE (e.g. missing colon). Conforms must still be True (sh:Warning)."""
+    import rdflib
+    from pyshacl import validate as shacl_validate
+
+    SH = rdflib.Namespace("http://www.w3.org/ns/shacl#")
+    ASB = rdflib.Namespace("https://asb.holobiomics.org/ns/asb#")
+
+    # Build a minimal claims graph with an invalid CURIE (no colon)
+    data = rdflib.Graph()
+    claim = rdflib.URIRef("urn:test:claim:1")
+    data.add((claim, rdflib.RDF.type, ASB.Claim))
+    data.add((claim, ASB.context,  rdflib.Literal("in vivo")))
+    data.add((claim, ASB.subject,  rdflib.Literal("glucose")))
+    data.add((claim, ASB.subject_ontology_term, rdflib.Literal("NOTACURIE")))  # invalid
+
+    shapes = adapter.shacl_shapes()
+    conforms, _, report = shacl_validate(
+        data_graph=data, shacl_graph=shapes,
+        inference="none", abort_on_first=False, meta_shacl=False,
+        allow_warnings=True,
+    )
+    # sh:Warning + allow_warnings=True: conforms is True but the violation is reported
+    assert conforms is True, "sh:Warning violations must not set conforms=False"
+    assert "subject_ontology_term" in report or "NOTACURIE" in report, (
+        "Expected warning about malformed CURIE in the validation report"
+    )
+
+
+def test_shacl_shapes_valid_curie_no_warning(adapter):
+    """A claim with a valid CURIE must produce no warnings from the metabolomics shapes."""
+    import rdflib
+    from pyshacl import validate as shacl_validate
+
+    ASB = rdflib.Namespace("https://asb.holobiomics.org/ns/asb#")
+
+    data = rdflib.Graph()
+    claim = rdflib.URIRef("urn:test:claim:2")
+    data.add((claim, rdflib.RDF.type, ASB.Claim))
+    data.add((claim, ASB.context,  rdflib.Literal("in vivo")))
+    data.add((claim, ASB.subject,  rdflib.Literal("glucose")))
+    data.add((claim, ASB.subject_ontology_term, rdflib.Literal("CHEBI:17234")))  # valid
+
+    shapes = adapter.shacl_shapes()
+    conforms, _, report = shacl_validate(
+        data_graph=data, shacl_graph=shapes,
+        inference="none", abort_on_first=False, meta_shacl=False,
+    )
+    assert conforms is True
