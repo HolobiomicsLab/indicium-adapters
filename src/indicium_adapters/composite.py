@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from indicium_adapters import CURRENT_API_VERSION
+from indicium_adapters import CURRENT_API_VERSION, SHACLProvider
 
 if TYPE_CHECKING:
     import rdflib
@@ -74,7 +74,7 @@ class CompositeAdapter:
         import rdflib as _rdflib
         g: _rdflib.Graph = _rdflib.Graph()
         for a in self._adapters:
-            if hasattr(a, "shacl_shapes"):
+            if isinstance(a, SHACLProvider):
                 g = g + a.shacl_shapes()
         return g
 

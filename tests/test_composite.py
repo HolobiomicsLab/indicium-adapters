@@ -162,6 +162,11 @@ def test_composite_extraction_context_contains_adapter_b_text(composite_ab):
     assert "Domain B context." in ctx
 
 
+def test_composite_extraction_context_uses_double_newline_separator(composite_ab):
+    ctx = composite_ab.extraction_context()
+    assert "\n\n" in ctx
+
+
 # ---------------------------------------------------------------------------
 # enrich_claim()
 # ---------------------------------------------------------------------------
