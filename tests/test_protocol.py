@@ -165,6 +165,9 @@ def test_discover_adapters_skips_wrong_api_version():
     assert any("api_version" in str(warning.message) for warning in w), (
         "Expected a UserWarning mentioning api_version"
     )
+    assert any(warning.category is UserWarning for warning in w), (
+        "Expected category to be UserWarning"
+    )
 
 
 def test_discover_adapters_loads_correct_api_version():

@@ -29,14 +29,33 @@ class DomainAdapter(Protocol):
     """
 
     domain_id: str
+    """Unique identifier, lowercase, hyphen-separated. e.g. "metabolomics"."""
+
     qualifiers: frozenset[str]
+    """Domain-specific qualifiers to add to Perspicacite's _QUALIFIERS set and
+    LLM prompt. Must not conflict with the base 20-qualifier set in indicium."""
+
     ontology_prefixes: dict[str, str]
+    """Prefix → base IRI mapping, e.g. {"CHEBI": "http://purl.obolibrary.org/obo/CHEBI_"}.
+    Used by enrich_claim() and by Scriptorium's RDF builder to expand CURIEs.
+    Note: indicium's own expand_curie() covers ECO/IAO/DoCO/CiTO/FaBiO/DCAT only —
+    domain-specific prefixes must be expanded using THIS adapter's ontology_prefixes."""
+
     api_version: int
     """Protocol API version this adapter targets. Must equal CURRENT_API_VERSION
     (currently 1) to be loaded by discover_adapters()."""
 
-    def extraction_context(self) -> str: ...
-    def enrich_claim(self, claim: dict) -> dict: ...
+    def extraction_context(self) -> str:
+        """Return a short plain-text string appended to Perspicacite's LLM
+        extraction prompt. Should name the domain, list extra qualifiers, and
+        guide subject/object naming conventions."""
+        ...
+
+    def enrich_claim(self, claim: dict) -> dict:
+        """Receive a validated 5-slot claim dict; return a new dict (never mutate
+        input). May add an "ontology_terms" sub-dict mapping slot names to CURIEs
+        e.g. {"subject": "CHEBI:14321"}. Must be a pure function (no I/O)."""
+        ...
 
 
 @runtime_checkable
@@ -78,7 +97,12 @@ def discover_adapters() -> dict[str, DomainAdapter]:
                 )
                 continue
             result[adapter.domain_id] = adapter
-        except Exception:
+        except Exception as exc:
+            warnings.warn(
+                f"Failed to load adapter '{ep.name}': {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
             continue
     return result
 
