@@ -6,13 +6,16 @@ via the [metabolomics] optional extra.
 """
 from __future__ import annotations
 
+import rdflib
+from importlib.resources import files
+
 
 class MetabolomicsAdapter:
     """Domain adapter for metabolomics: qualifiers, CHEBI-prefixed ontology
-    terms, and static compound name → CURIE enrichment."""
+    terms, static compound name → CURIE enrichment, and SHACL shapes."""
 
     domain_id = "metabolomics"
-    api_version = 1  # protocol version guard
+    api_version = 1
 
     qualifiers: frozenset[str] = frozenset({
         "identifies",            # mass-spec identification claim
@@ -69,3 +72,14 @@ class MetabolomicsAdapter:
             if chebi := self._COMPOUNDS.get(name):
                 claim.setdefault("ontology_terms", {})[slot] = chebi
         return claim
+
+    def shacl_shapes(self) -> rdflib.Graph:
+        """Return an rdflib.Graph with SHACL shapes for metabolomics RDF nodes.
+
+        Loads the bundled metabolomics.shapes.ttl from the package directory.
+        Returns a fresh Graph each call (no shared state between calls).
+        """
+        g = rdflib.Graph()
+        ttl = files("indicium_adapters").joinpath("metabolomics.shapes.ttl")
+        g.parse(ttl.open("rb"), format="turtle")
+        return g

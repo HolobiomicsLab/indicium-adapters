@@ -1,5 +1,7 @@
 """Unit tests for MetabolomicsAdapter."""
 import pytest
+import rdflib
+from rdflib import RDF
 from indicium_adapters import DomainAdapter
 from indicium_adapters.metabolomics import MetabolomicsAdapter
 
@@ -164,3 +166,52 @@ def test_enrich_claim_does_not_mutate_existing_ontology_terms(adapter):
     )
     # The result should have the new CHEBI value (not the old HMDB value)
     assert result["ontology_terms"]["subject"] == "CHEBI:17234"
+
+
+# ---------------------------------------------------------------------------
+# shacl_shapes()
+# ---------------------------------------------------------------------------
+
+
+def test_api_version(adapter):
+    """api_version must equal 1."""
+    assert adapter.api_version == 1
+
+
+def test_metabolomics_satisfies_shacl_provider(adapter):
+    """MetabolomicsAdapter must satisfy the SHACLProvider mixin protocol."""
+    from indicium_adapters import SHACLProvider
+    assert isinstance(adapter, SHACLProvider)
+
+
+def test_shacl_shapes_returns_graph(adapter):
+    """shacl_shapes() must return a non-empty rdflib.Graph."""
+    g = adapter.shacl_shapes()
+    assert isinstance(g, rdflib.Graph)
+    assert len(g) > 0
+
+
+def test_shacl_shapes_contains_node_shape(adapter):
+    """The returned graph must contain at least one sh:NodeShape triple."""
+    SH = rdflib.Namespace("http://www.w3.org/ns/shacl#")
+    g = adapter.shacl_shapes()
+    node_shapes = list(g.subjects(RDF.type, SH.NodeShape))
+    assert len(node_shapes) > 0, (
+        "shacl_shapes() graph must contain at least one sh:NodeShape"
+    )
+
+
+def test_shacl_shapes_returns_independent_graphs(adapter):
+    """Calling shacl_shapes() twice must return independent Graph objects."""
+    g1 = adapter.shacl_shapes()
+    g2 = adapter.shacl_shapes()
+    assert g1 is not g2
+    sentinel = (
+        rdflib.URIRef("urn:test:s"),
+        rdflib.URIRef("urn:test:p"),
+        rdflib.URIRef("urn:test:o"),
+    )
+    g1.add(sentinel)
+    assert sentinel not in g2, (
+        "shacl_shapes() must return independent Graphs — mutating one affected the other"
+    )

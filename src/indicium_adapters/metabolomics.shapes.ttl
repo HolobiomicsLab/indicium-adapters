@@ -1,0 +1,11 @@
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix CHEBI: <http://purl.obolibrary.org/obo/CHEBI_> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+
+<https://w3id.org/indicium/shapes/metabolomics/ChebiIriShape>
+    a sh:NodeShape ;
+    rdfs:comment "CHEBI compound IRIs must use the canonical OBO namespace." ;
+    sh:targetSubjectsOf CHEBI:is_a ;
+    sh:nodeKind sh:IRI ;
+    sh:pattern "^http://purl\\.obolibrary\\.org/obo/CHEBI_\\d+$" .
