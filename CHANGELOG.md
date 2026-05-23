@@ -1,0 +1,43 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.2.0] - 2026-05-23
+
+### Added
+- `SHACLProvider` Protocol mixin — adapters that implement `shacl_shapes() -> rdflib.Graph` are
+  automatically detected by `indicium.validate_graph()` and their shapes are merged into validation.
+- `api_version: int` field on `DomainAdapter` Protocol and `CURRENT_API_VERSION` constant.
+  `discover_adapters()` now skips adapters whose `api_version` does not match `CURRENT_API_VERSION`
+  and emits a `RuntimeWarning` with upgrade instructions.
+- `MetabolomicsAdapter.shacl_shapes()` — returns the bundled `metabolomics.shapes.ttl` graph
+  containing CURIE-format constraints on `asb:subject_ontology_term` / `asb:object_ontology_term`.
+
+### Fixed
+- `metabolomics.shapes.ttl` shape target corrected from the inert `sh:targetSubjectsOf CHEBI:is_a`
+  to `sh:targetClass asb:Claim` with property shapes on the `asb:{slot}_ontology_term` predicates
+  emitted by `claims_to_graph()`.
+- CURIE regex pattern in `metabolomics.shapes.ttl` broadened from `[A-Za-z0-9_]+` to
+  `[A-Za-z0-9_.+-]+` in the local part, accommodating PubChem, InChIKey, and other identifiers
+  that contain dots, hyphens, or plus signs.
+- `rdflib>=7.0` added as an explicit runtime dependency (was only transitive via `indicium`).
+- `indicium` dependency floor raised from `>=1.0` to `>=1.4`, which is the minimum version that
+  provides the `extra_shapes` kwarg required by `SHACLProvider` injection.
+
+---
+
+## [0.1.0] - 2026-05-20
+
+### Added
+- `DomainAdapter` Protocol with `domain_id`, `domain_label`, and `api_version` fields.
+- `discover_adapters()` — entry-point discovery function resolving all `indicium.adapters`
+  entry points at import time; returns a `dict[str, DomainAdapter]` keyed by `domain_id`.
+- `MetabolomicsAdapter` with:
+  - `enrich_claim()` — annotates `subject` / `object` / `qualifier` slots with CHEBI CURIEs from
+    a static compound lookup table (live network lookup planned for a future `[network]` extra).
+  - `domain_context` string injected into LLM extraction prompts for metabolomics-aware extraction.

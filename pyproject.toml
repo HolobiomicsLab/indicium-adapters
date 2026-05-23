@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "indicium-adapters"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.12"
 description = "Community-extensible domain adapters for the indicium knowledge standard"
 dependencies = [
-    "indicium>=1.0",
+    "indicium>=1.4",
     "rdflib>=7.0",
 ]
 
