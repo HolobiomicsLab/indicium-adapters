@@ -3,7 +3,6 @@
 Discovery tests (requiring installed entry-points) are in the same file
 but isolated so they can be skipped when entry-points aren't registered.
 """
-import pytest
 from indicium_adapters import DomainAdapter, discover_adapters
 
 
@@ -92,7 +91,7 @@ def test_discover_adapters_domain_ids_are_lowercase_no_spaces():
 
 
 # ---------------------------------------------------------------------------
-# Discovery — requires installed entry-point (registered by uv sync above)
+# Discovery — requires installed entry-point (run 'uv sync --extra dev' to register)
 # ---------------------------------------------------------------------------
 
 def test_discover_adapters_finds_metabolomics():
@@ -105,14 +104,14 @@ def test_discover_adapters_finds_metabolomics():
 
 
 def test_discovered_metabolomics_satisfies_protocol():
+    """Discovered metabolomics adapter must satisfy the DomainAdapter protocol."""
     adapters = discover_adapters()
-    if "metabolomics" not in adapters:
-        pytest.skip("MetabolomicsAdapter not installed — run uv sync")
+    assert "metabolomics" in adapters, "Run 'uv sync --extra dev' in indicium-adapters"
     assert isinstance(adapters["metabolomics"], DomainAdapter)
 
 
 def test_discovered_metabolomics_domain_id():
+    """Discovered metabolomics adapter must report domain_id == 'metabolomics'."""
     adapters = discover_adapters()
-    if "metabolomics" not in adapters:
-        pytest.skip("MetabolomicsAdapter not installed — run uv sync")
+    assert "metabolomics" in adapters, "Run 'uv sync --extra dev' in indicium-adapters"
     assert adapters["metabolomics"].domain_id == "metabolomics"
