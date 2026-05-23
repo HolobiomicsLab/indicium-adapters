@@ -7,7 +7,7 @@ name = "indicium-adapters"
 version = "0.1.0"
 requires-python = ">=3.12"
 description = "Community-extensible domain adapters for the indicium knowledge standard"
-dependencies = ["indicium>=0.3"]
+dependencies = ["indicium>=1.0"]
 
 [project.optional-dependencies]
 dev = [
