@@ -43,7 +43,7 @@ class DomainAdapter(Protocol):
         ...
 
 
-def discover_adapters() -> dict[str, "DomainAdapter"]:
+def discover_adapters() -> dict[str, DomainAdapter]:
     """Return all installed DomainAdapters, keyed by domain_id.
 
     Discovers via the 'indicium.adapters' entry-point group. If two packages
@@ -57,10 +57,10 @@ def discover_adapters() -> dict[str, "DomainAdapter"]:
     for ep in entry_points(group="indicium.adapters"):
         try:
             adapter: DomainAdapter = ep.load()()
+            result[adapter.domain_id] = adapter
         except Exception:
             # Skip entry-points that fail to load (e.g. class not yet implemented).
             continue
-        result[adapter.domain_id] = adapter
     return result
 
 

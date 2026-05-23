@@ -3,7 +3,6 @@
 Discovery tests (requiring installed entry-points) are in the same file
 but isolated so they can be skipped when entry-points aren't registered.
 """
-import pytest
 from indicium_adapters import DomainAdapter, discover_adapters
 
 
