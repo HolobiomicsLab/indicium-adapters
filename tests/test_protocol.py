@@ -3,6 +3,9 @@
 Discovery tests (requiring installed entry-points) are in the same file
 but isolated so they can be skipped when entry-points aren't registered.
 """
+import warnings
+from unittest.mock import MagicMock, patch
+
 from indicium_adapters import DomainAdapter, discover_adapters
 
 
@@ -15,6 +18,7 @@ class _MinimalAdapter:
     domain_id = "test_domain"
     qualifiers = frozenset({"test_q"})
     ontology_prefixes = {"TST": "http://test.example.org/"}
+    api_version = 1  # required by updated Protocol
 
     def extraction_context(self) -> str:
         return "Domain: test."
@@ -115,3 +119,72 @@ def test_discovered_metabolomics_domain_id():
     adapters = discover_adapters()
     assert "metabolomics" in adapters, "Run 'uv sync --extra dev' in indicium-adapters"
     assert adapters["metabolomics"].domain_id == "metabolomics"
+
+
+# ---------------------------------------------------------------------------
+# Protocol versioning (Task 1)
+# ---------------------------------------------------------------------------
+
+
+def test_current_api_version_exported():
+    """CURRENT_API_VERSION must be exported and be an int equal to 1."""
+    from indicium_adapters import CURRENT_API_VERSION
+    assert isinstance(CURRENT_API_VERSION, int)
+    assert CURRENT_API_VERSION == 1
+
+
+def test_metabolomics_has_api_version():
+    """MetabolomicsAdapter must have api_version == CURRENT_API_VERSION."""
+    from indicium_adapters import CURRENT_API_VERSION
+    from indicium_adapters.metabolomics import MetabolomicsAdapter
+    adapter = MetabolomicsAdapter()
+    assert hasattr(adapter, "api_version")
+    assert adapter.api_version == CURRENT_API_VERSION
+
+
+def test_discover_adapters_skips_wrong_api_version():
+    """discover_adapters() must emit UserWarning and skip adapters with wrong api_version."""
+    class _WrongVersionAdapter:
+        domain_id = "bad"
+        api_version = 999
+        qualifiers = frozenset()
+        ontology_prefixes = {}
+        def extraction_context(self): return ""
+        def enrich_claim(self, c): return c
+
+    mock_ep = MagicMock()
+    mock_ep.name = "bad_adapter"
+    mock_ep.load.return_value = _WrongVersionAdapter
+
+    with patch("importlib.metadata.entry_points", return_value=[mock_ep]):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = discover_adapters()
+
+    assert "bad" not in result
+    assert any("api_version" in str(warning.message) for warning in w), (
+        "Expected a UserWarning mentioning api_version"
+    )
+
+
+def test_discover_adapters_loads_correct_api_version():
+    """discover_adapters() must load adapters with the current api_version."""
+    from indicium_adapters import CURRENT_API_VERSION
+
+    class _GoodVersionAdapter:
+        domain_id = "good"
+        api_version = CURRENT_API_VERSION
+        qualifiers = frozenset()
+        ontology_prefixes = {}
+        def extraction_context(self): return ""
+        def enrich_claim(self, c): return c
+
+    mock_ep = MagicMock()
+    mock_ep.name = "good_adapter"
+    mock_ep.load.return_value = _GoodVersionAdapter
+
+    with patch("importlib.metadata.entry_points", return_value=[mock_ep]):
+        result = discover_adapters()
+
+    assert "good" in result
+    assert isinstance(result["good"], DomainAdapter)

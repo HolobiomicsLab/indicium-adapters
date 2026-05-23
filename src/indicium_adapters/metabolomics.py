@@ -12,6 +12,7 @@ class MetabolomicsAdapter:
     terms, and static compound name → CURIE enrichment."""
 
     domain_id = "metabolomics"
+    api_version = 1  # protocol version guard
 
     qualifiers: frozenset[str] = frozenset({
         "identifies",            # mass-spec identification claim
