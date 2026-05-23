@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-05-23
+
+### Added
+- `CompositeAdapter` — combines 2+ `DomainAdapter` instances into one that satisfies both
+  `DomainAdapter` and `SHACLProvider` protocols. Composition rules: `qualifiers` (union),
+  `ontology_prefixes` (merged dict, later adapter wins on key conflict), `extraction_context()`
+  (concatenated with double newline), `enrich_claim()` (sequential chain — each adapter
+  enriches the output of the previous), `shacl_shapes()` (merged `rdflib.Graph`; adapters
+  without `shacl_shapes()` are silently skipped; uses `isinstance(SHACLProvider)` check).
+- `compose_adapters(adapters)` — factory function: returns the single adapter unchanged
+  when `len(adapters) == 1` (no wrapping overhead); returns `CompositeAdapter` for 2+;
+  raises `ValueError` for an empty list.
+- Both `CompositeAdapter` and `compose_adapters` exported from the top-level
+  `indicium_adapters` package.
+
+---
+
 ## [0.2.0] - 2026-05-23
 
 ### Added
