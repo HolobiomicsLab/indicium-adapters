@@ -34,7 +34,7 @@ class MetabolomicsAdapter:
     _COMPOUNDS: dict[str, str] = {
         "glutamate":   "CHEBI:14321",
         "glutamine":   "CHEBI:58359",
-        "glucose":     "CHEBI:4167",
+        "glucose":     "CHEBI:17234",
         "atp":         "CHEBI:15422",
         "nadh":        "CHEBI:16908",
         "acetyl-coa":  "CHEBI:15351",
@@ -61,8 +61,10 @@ class MetabolomicsAdapter:
         CURIEs use the CHEBI prefix defined in ontology_prefixes.
         """
         claim = dict(claim)  # never mutate input
+        if "ontology_terms" in claim:
+            claim["ontology_terms"] = dict(claim["ontology_terms"])
         for slot in ("subject", "object"):
-            name = claim.get(slot, "").strip().lower()
+            name = (claim.get(slot) or "").strip().lower()
             if chebi := self._COMPOUNDS.get(name):
                 claim.setdefault("ontology_terms", {})[slot] = chebi
         return claim

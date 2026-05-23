@@ -78,7 +78,7 @@ def test_enrich_claim_adds_ontology_terms_for_known_subject(adapter):
     }
     result = adapter.enrich_claim(claim)
     assert "ontology_terms" in result
-    assert result["ontology_terms"]["subject"] == "CHEBI:4167"
+    assert result["ontology_terms"]["subject"] == "CHEBI:17234"
 
 
 def test_enrich_claim_adds_ontology_terms_for_known_object(adapter):
@@ -146,4 +146,21 @@ def test_enrich_claim_both_slots_known(adapter):
     }
     result = adapter.enrich_claim(claim)
     assert result["ontology_terms"]["subject"] == "CHEBI:15422"
-    assert result["ontology_terms"]["object"] == "CHEBI:4167"
+    assert result["ontology_terms"]["object"] == "CHEBI:17234"
+
+
+def test_enrich_claim_does_not_mutate_existing_ontology_terms(adapter):
+    """When input already has ontology_terms, the original inner dict must not be mutated."""
+    inner = {"subject": "HMDB:HMDB0000001"}
+    claim = {
+        "context": "in vivo", "subject": "glucose", "qualifier": "quantifies",
+        "relation": "measured in", "object": "plasma",
+        "ontology_terms": inner,
+    }
+    result = adapter.enrich_claim(claim)
+    # result may overwrite subject with CHEBI, but the original inner dict must be unchanged
+    assert inner == {"subject": "HMDB:HMDB0000001"}, (
+        "enrich_claim() must not mutate the pre-existing ontology_terms dict"
+    )
+    # The result should have the new CHEBI value (not the old HMDB value)
+    assert result["ontology_terms"]["subject"] == "CHEBI:17234"
