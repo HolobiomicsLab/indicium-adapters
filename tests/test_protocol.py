@@ -191,3 +191,45 @@ def test_discover_adapters_loads_correct_api_version():
 
     assert "good" in result
     assert isinstance(result["good"], DomainAdapter)
+
+
+# ---------------------------------------------------------------------------
+# SHACL Provider protocol (Task 2)
+# ---------------------------------------------------------------------------
+
+
+def test_shacl_provider_is_exported():
+    """SHACLProvider must be importable from indicium_adapters."""
+    from indicium_adapters import SHACLProvider
+    assert SHACLProvider is not None
+
+
+def test_shacl_provider_is_runtime_checkable():
+    """isinstance() with SHACLProvider must not raise TypeError."""
+    from indicium_adapters import SHACLProvider
+    result = isinstance(object(), SHACLProvider)
+    assert result is False
+
+
+def test_minimal_adapter_does_not_satisfy_shacl_provider():
+    """A plain DomainAdapter without shacl_shapes() must NOT satisfy SHACLProvider."""
+    from indicium_adapters import SHACLProvider
+    assert not isinstance(_MinimalAdapter(), SHACLProvider)
+
+
+def test_shacl_provider_requires_shacl_shapes_method():
+    """A class with all DomainAdapter attrs + shacl_shapes() satisfies SHACLProvider."""
+    import rdflib
+    from indicium_adapters import SHACLProvider
+
+    class _FullSHACLAdapter:
+        domain_id = "test"
+        api_version = 1
+        qualifiers = frozenset()
+        ontology_prefixes = {}
+        def extraction_context(self): return ""
+        def enrich_claim(self, c): return c
+        def shacl_shapes(self) -> rdflib.Graph:
+            return rdflib.Graph()
+
+    assert isinstance(_FullSHACLAdapter(), SHACLProvider)
