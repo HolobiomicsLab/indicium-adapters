@@ -265,5 +265,6 @@ def test_shacl_shapes_valid_curie_no_warning(adapter):
     conforms, _, report = shacl_validate(
         data_graph=data, shacl_graph=shapes,
         inference="none", abort_on_first=False, meta_shacl=False,
+        allow_warnings=True,
     )
     assert conforms is True

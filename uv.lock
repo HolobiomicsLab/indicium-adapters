@@ -106,7 +106,7 @@ wheels = [
 
 [[package]]
 name = "indicium"
-version = "1.2.0"
+version = "1.4.0"
 source = { editable = "../indicium" }
 dependencies = [
     { name = "pyshacl" },
@@ -120,10 +120,11 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.25" },
     { name = "pyshacl", specifier = ">=0.26" },
+    { name = "pyyaml", marker = "extra == 'astra'", specifier = ">=6.0" },
     { name = "pyyaml", marker = "extra == 'codegen'", specifier = ">=6.0" },
     { name = "rdflib", specifier = ">=7.0" },
 ]
-provides-extras = ["codegen", "docs"]
+provides-extras = ["codegen", "astra", "docs"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -141,10 +142,12 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "indicium" },
+    { name = "rdflib" },
 ]
 
 [package.optional-dependencies]
 dev = [
+    { name = "pyshacl" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -152,8 +155,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "indicium", editable = "../indicium" },
+    { name = "pyshacl", marker = "extra == 'dev'", specifier = ">=0.26" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
+    { name = "rdflib", specifier = ">=7.0" },
 ]
 provides-extras = ["dev", "metabolomics"]
 

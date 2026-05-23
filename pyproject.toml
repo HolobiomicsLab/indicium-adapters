@@ -7,12 +7,16 @@ name = "indicium-adapters"
 version = "0.1.0"
 requires-python = ">=3.12"
 description = "Community-extensible domain adapters for the indicium knowledge standard"
-dependencies = ["indicium>=1.0"]
+dependencies = [
+    "indicium>=1.0",
+    "rdflib>=7.0",
+]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
+    "pyshacl>=0.26",
 ]
 metabolomics = []  # placeholder; add "chebi-lookup>=x" here if live lookups added later
 

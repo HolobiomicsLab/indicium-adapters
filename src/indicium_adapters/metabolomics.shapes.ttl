@@ -10,14 +10,14 @@
     sh:property [
         sh:path asb:subject_ontology_term ;
         sh:datatype xsd:string ;
-        sh:pattern "^\\w+:[A-Za-z0-9_]+$" ;
+        sh:pattern "^\\w[\\w.-]*:[A-Za-z0-9_.+-]+$" ;
         sh:severity sh:Warning ;
-        sh:message "subject_ontology_term must be a valid CURIE (e.g. CHEBI:17234)" ;
+        sh:message "subject_ontology_term must be a valid CURIE (PREFIX:localid), e.g. CHEBI:17234 or HMDB:HMDB0000122" ;
     ] ;
     sh:property [
         sh:path asb:object_ontology_term ;
         sh:datatype xsd:string ;
-        sh:pattern "^\\w+:[A-Za-z0-9_]+$" ;
+        sh:pattern "^\\w[\\w.-]*:[A-Za-z0-9_.+-]+$" ;
         sh:severity sh:Warning ;
-        sh:message "object_ontology_term must be a valid CURIE (e.g. CHEBI:15361)" ;
+        sh:message "object_ontology_term must be a valid CURIE (PREFIX:localid), e.g. CHEBI:15361 or MTBLS:1234" ;
     ] .
