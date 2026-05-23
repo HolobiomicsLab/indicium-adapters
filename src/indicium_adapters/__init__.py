@@ -107,4 +107,13 @@ def discover_adapters() -> dict[str, DomainAdapter]:
     return result
 
 
-__all__ = ["CURRENT_API_VERSION", "DomainAdapter", "SHACLProvider", "discover_adapters"]
+from indicium_adapters.composite import CompositeAdapter, compose_adapters
+
+__all__ = [
+    "CURRENT_API_VERSION",
+    "CompositeAdapter",
+    "DomainAdapter",
+    "SHACLProvider",
+    "compose_adapters",
+    "discover_adapters",
+]
