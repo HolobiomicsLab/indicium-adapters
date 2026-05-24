@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] — 2026-05-24
+
+### Removed
+- `MetabolomicsAdapter` and its `metabolomics.shapes.ttl` and associated tests.
+  These have moved to the new `indicium-adapters-metabolomics` package, which
+  ships richer enrichment (RefMet+BridgeDb compound index) and adds two sibling
+  adapters: `MetaboKGAdapter` and `EMIAdapter`.
+  Migration: `pip install indicium-adapters-metabolomics` — the
+  `discover_adapters()["metabolomics"]` entry remains available, now sourced
+  from the new package.
+
+---
+
 ## [0.3.0] - 2026-05-23
 
 ### Added

@@ -134,10 +134,17 @@ def test_current_api_version_exported():
 
 
 def test_metabolomics_has_api_version():
-    """MetabolomicsAdapter must have api_version == CURRENT_API_VERSION."""
+    """Discovered metabolomics adapter must have api_version == CURRENT_API_VERSION.
+
+    MetabolomicsAdapter now lives in indicium-adapters-metabolomics; test via
+    discover_adapters() so the test is package-location-agnostic.
+    """
     from indicium_adapters import CURRENT_API_VERSION
-    from indicium_adapters.metabolomics import MetabolomicsAdapter
-    adapter = MetabolomicsAdapter()
+    adapters = discover_adapters()
+    assert "metabolomics" in adapters, (
+        "MetabolomicsAdapter not found. Install indicium-adapters-metabolomics."
+    )
+    adapter = adapters["metabolomics"]
     assert hasattr(adapter, "api_version")
     assert adapter.api_version == CURRENT_API_VERSION
 
