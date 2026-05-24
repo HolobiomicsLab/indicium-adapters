@@ -1,0 +1,13 @@
+slug: mzmine
+name: MZmine
+canonical_url: https://github.com/mzmine/mzmine
+edam_operation: operation_3215
+edam_topics:
+  - topic_3172
+evidence_spans:
+  - quote: "Data were processed in MZmine 4."
+    source_doi: 10.1/abc
+    paragraph_id: para-7
+source_papers:
+  - doi: 10.1/abc
+    title: "An LC-MS metabolomics study"

@@ -1,0 +1,10 @@
+collection_iri: https://w3id.org/holobiomicslab/asb-skill/collection/metabolomics/v1
+version: v1
+skills:
+  - slug: feature-detection-lcms
+    path: skills/feature-detection-lcms/SKILL.md
+tools:
+  - slug: mzmine
+    path: tools/mzmine.yaml
+claims:
+  path: claims.yaml

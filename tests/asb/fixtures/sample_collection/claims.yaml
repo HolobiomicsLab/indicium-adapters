@@ -1,0 +1,14 @@
+- claim_id: "https://w3id.org/holobiomicslab/asb-skill/feature-detection-lcms/claim/01"
+  subject: "MZmine ADAP-3D"
+  predicate: "detects"
+  object: "chromatographic features in LC-MS data"
+  qualifiers:
+    - "untargeted"
+  super_pattern: "method-detects-entity"
+  evidence_spans:
+    - quote: "MZmine using the ADAP-3D algorithm detects features in LC-MS data."
+      source_doi: 10.1/abc
+      paragraph_id: para-12
+  source_papers:
+    - doi: 10.1/abc
+      title: "An LC-MS metabolomics study"
