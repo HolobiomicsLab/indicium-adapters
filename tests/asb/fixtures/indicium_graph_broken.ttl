@@ -1,0 +1,5 @@
+@prefix indicium: <https://w3id.org/holobiomicslab/indicium#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# Intentionally empty: no claim IRIs declared. The round-trip checker
+# should flag every claim URI in every SKILL.md as unresolved.

@@ -16,6 +16,11 @@ from indicium_adapters.asb.models import (
     ASBSourcePaper,
     ASBToolRecord,
 )
+from indicium_adapters.asb.round_trip import (
+    RoundTripResult,
+    UnresolvedClaim,
+    run_round_trip_check,
+)
 
 __version__ = "0.5.0"
 
@@ -27,6 +32,9 @@ __all__ = [
     "ASBSkillRecord",
     "ASBSourcePaper",
     "ASBToolRecord",
+    "RoundTripResult",
+    "UnresolvedClaim",
     "__version__",
     "load_collection",
+    "run_round_trip_check",
 ]
