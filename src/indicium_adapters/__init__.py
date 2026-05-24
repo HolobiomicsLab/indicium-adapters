@@ -109,7 +109,19 @@ def discover_adapters() -> dict[str, DomainAdapter]:
 
 from indicium_adapters.composite import CompositeAdapter, compose_adapters
 
+
+def __getattr__(name: str):
+    # Lazy-load the asb subpackage so the optional extras aren't
+    # required for users who only need the core DomainAdapter Protocol.
+    if name == "ASBAdapter":
+        from indicium_adapters.asb import ASBAdapter
+
+        return ASBAdapter
+    raise AttributeError(name)
+
+
 __all__ = [
+    "ASBAdapter",
     "CURRENT_API_VERSION",
     "CompositeAdapter",
     "DomainAdapter",

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.5.0 — 2026-05-24
+
+### Added
+
+- New `indicium_adapters.asb` subpackage: maps ASB-Skill collection
+  on-disk artifacts (collection.yaml, SKILL.md frontmatter,
+  tools/<slug>.yaml) onto `indicium:Evidence`, `indicium:SoftwareEntity`,
+  `indicium:Claim`, `indicium:InformationSource`, and SEPIO skill→claim
+  assertions.
+- PROV-O envelope (`prov:wasGeneratedBy`, `prov:wasDerivedFrom`,
+  `prov:atTime`) attached to every typed node.
+- `BioToolsResolver` with SQLite cache and `ASB_ADAPTER_OFFLINE` env
+  hook for CI determinism.
+- `run_round_trip_check()` CI gate that fails on any dangling
+  `metadata.claims` URI in any SKILL.md.
+- `verify-claims` console script for `asb-skill-collections` CI integration.
+
+### Notes
+
+- Subpackage requires the new optional extra: `pip install -e '.[asb]'`.
+- The reverse (indicium → ASB-Skill hints) adapter is deferred to v1.1.
+- The `SciSkill`→`ASBSkill` Python rename in ASB lands in Wave 2;
+  this subpackage works against on-disk artifacts only and is unaffected.
+
+---
+
 ## [0.4.0] — 2026-05-24
 
 ### Removed
