@@ -7,10 +7,29 @@ name = "indicium-adapters"
 version = "0.4.0"
 requires-python = ">=3.12"
 description = "Community-extensible domain adapters for the indicium knowledge standard"
+authors = [{name = "Louis-Felix Nothias", email = "louis-felix.nothias@cnrs.fr"}]
+keywords = ["indicium", "knowledge-graph", "rdf", "shacl", "domain-adapter", "protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
 dependencies = [
     "indicium>=1.4",
     "rdflib>=7.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/HolobiomicsLab/indicium-adapters"
+Repository = "https://github.com/HolobiomicsLab/indicium-adapters"
+Issues = "https://github.com/HolobiomicsLab/indicium-adapters/issues"
+Changelog = "https://github.com/HolobiomicsLab/indicium-adapters/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
