@@ -44,6 +44,9 @@ asb = [
     "httpx>=0.27",
 ]
 
+[project.scripts]
+verify-claims = "indicium_adapters.asb.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/indicium_adapters"]
 

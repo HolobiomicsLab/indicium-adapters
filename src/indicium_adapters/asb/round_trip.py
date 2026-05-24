@@ -32,10 +32,11 @@ class RoundTripResult:
 
     ok: bool
     unresolved: list[UnresolvedClaim] = field(default_factory=list)
+    resolved_count: int = 0
 
     def render(self) -> str:
         if self.ok:
-            return "round-trip OK"
+            return f"round-trip OK — {self.resolved_count} claim(s) resolved"
         lines = ["round-trip FAIL — unresolved claim IRIs:"]
         for u in self.unresolved:
             lines.append(f"  - {u.skill_slug}: {u.claim_iri}")
@@ -59,13 +60,18 @@ def run_round_trip_check(
         for s, _, _ in indicium_graph.triples((None, RDF.type, INDICIUM.Claim))
     }
     unresolved: list[UnresolvedClaim] = []
+    resolved_count = 0
     for skill in coll.skills:
         for claim_iri in skill.claim_ids:
             if claim_iri not in known_claims:
                 unresolved.append(
                     UnresolvedClaim(skill_slug=skill.slug, claim_iri=claim_iri)
                 )
-    result = RoundTripResult(ok=not unresolved, unresolved=unresolved)
+            else:
+                resolved_count += 1
+    result = RoundTripResult(
+        ok=not unresolved, unresolved=unresolved, resolved_count=resolved_count
+    )
     if fail_on_missing and not result.ok:
         raise AssertionError(result.render())
     return result
