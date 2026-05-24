@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: indicium-adapters
+message: "If you use this software, please cite it as below."
+type: software
+version: 0.4.0
+date-released: "2026-05-24"
+authors:
+  - family-names: Nothias
+    given-names: Louis-Felix
+    email: louis-felix.nothias@cnrs.fr
+repository-code: "https://github.com/HolobiomicsLab/indicium-adapters"
+license: MIT
+keywords:
+  - indicium
+  - knowledge-graph
+  - rdf
+  - shacl
+  - domain-adapter
+  - protocol
+abstract: >-
+  Protocol-only core of the indicium domain-adapter ecosystem.
+  Defines DomainAdapter and SHACLProvider structural Protocols, the
+  CompositeAdapter helper, and the discover_adapters() entry-point
+  discovery function. Domain-specific bundles ship in sibling
+  indicium-adapters-<domain> packages.
