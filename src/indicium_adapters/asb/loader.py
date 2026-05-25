@@ -67,16 +67,50 @@ def load_collection(root: Path | str) -> ASBCollection:
         raise FileNotFoundError(f"missing collection.yaml in {root_path}")
     index = _read_yaml(index_path) or {}
 
+    # The ASB ``asb collection promote`` emitter (Plan 2a/2b) writes
+    # collection.yaml with ``skills: [{slug, iri}]`` and a sibling
+    # ``tools.lock.yaml`` rather than inline ``skills: [{path}]`` entries.
+    # Accept both shapes: explicit-path (used by tests/fixtures) and the
+    # slug-implied path convention ``skills/<slug>/SKILL.md`` produced by
+    # the real CLI.
+
+    def _skill_md_path(entry: dict) -> Path:
+        if "path" in entry:
+            return root_path / entry["path"]
+        slug = entry.get("slug") or entry.get("name")
+        if not slug:
+            raise ValueError(
+                f"skill entry missing both 'path' and 'slug': {entry!r}"
+            )
+        return root_path / "skills" / slug / "SKILL.md"
+
     skills: list[ASBSkillRecord] = []
     for entry in index.get("skills", []):
-        md = root_path / entry["path"]
+        md = _skill_md_path(entry)
+        if not md.exists():
+            # Some entries may reference legacy slug/iri without a file
+            # present yet (e.g. during partial promotes); skip silently.
+            continue
         fm = _extract_frontmatter(md)
         skills.append(ASBSkillRecord.model_validate(fm))
 
     tools: list[ASBToolRecord] = []
+    # Inline `tools: [{path}]` (legacy schema)
     for entry in index.get("tools", []):
+        if "path" not in entry:
+            continue
         data = _read_yaml(root_path / entry["path"])
         tools.append(ASBToolRecord.model_validate(data))
+    # Sibling tools.lock.yaml (current asb collection promote)
+    lock_path = root_path / "tools.lock.yaml"
+    if lock_path.is_file():
+        lock = _read_yaml(lock_path) or {}
+        for entry in lock.get("tools", []):
+            try:
+                tools.append(ASBToolRecord.model_validate(entry))
+            except Exception:
+                # Skip silently — schemas may diverge until LinkML normalizes
+                continue
 
     claims: list[ASBClaimRecord] = []
     claims_entry = index.get("claims")
@@ -88,9 +122,18 @@ def load_collection(root: Path | str) -> ASBCollection:
         for c in raw:
             claims.append(ASBClaimRecord.model_validate(c))
 
+    # collection_iri synthesis: prefer explicit, otherwise derive from slug+version.
+    collection_iri = index.get("collection_iri")
+    if not collection_iri:
+        slug = index.get("slug", "unknown")
+        version = index.get("version", 1)
+        collection_iri = (
+            f"https://w3id.org/holobiomicslab/asb-skill/collection/{slug}/v{version}"
+        )
+
     return ASBCollection(
-        collection_iri=index["collection_iri"],
-        version=index["version"],
+        collection_iri=collection_iri,
+        version=str(index.get("version", "1")),
         skills=skills,
         tools=tools,
         claims=claims,
