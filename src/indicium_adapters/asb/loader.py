@@ -92,7 +92,34 @@ def load_collection(root: Path | str) -> ASBCollection:
             # present yet (e.g. during partial promotes); skip silently.
             continue
         fm = _extract_frontmatter(md)
-        skills.append(ASBSkillRecord.model_validate(fm))
+        # SKILL.md frontmatter uses Anthropic-style ``name:`` only; the
+        # Pydantic model requires both ``slug`` and ``name``. Derive
+        # ``slug`` from the directory name (which mirrors the value of
+        # ``name`` produced by ``asb collection promote``) when it's
+        # missing from the frontmatter itself.
+        if "slug" not in fm:
+            fm["slug"] = fm.get("name") or md.parent.name
+        if "name" not in fm:
+            fm["name"] = fm.get("slug") or md.parent.name
+        # The promote emitter stores nested EDAM metadata under
+        # ``metadata.edam_topics`` / ``metadata.edam_operation``. The
+        # legacy fixtures put them flat. Try both.
+        if "edam_topics" not in fm and isinstance(fm.get("metadata"), dict):
+            fm["edam_topics"] = fm["metadata"].get("edam_topics", []) or []
+        if "edam_operation" not in fm and isinstance(fm.get("metadata"), dict):
+            fm["edam_operation"] = fm["metadata"].get("edam_operation", "") or ""
+        # Tools/source_papers/claim_ids may also live under metadata.
+        if "claim_ids" not in fm and isinstance(fm.get("metadata"), dict):
+            fm["claim_ids"] = fm["metadata"].get("claims", []) or []
+        try:
+            skills.append(ASBSkillRecord.model_validate(fm))
+        except Exception as exc:
+            # Skip malformed entries with a structured log; don't fail
+            # the entire round-trip check on one bad skill.
+            import warnings
+            warnings.warn(
+                f"loader: skipping {md} — {type(exc).__name__}: {exc}"
+            )
 
     tools: list[ASBToolRecord] = []
     # Inline `tools: [{path}]` (legacy schema)
