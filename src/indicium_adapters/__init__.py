@@ -32,8 +32,17 @@ class DomainAdapter(Protocol):
     """Unique identifier, lowercase, hyphen-separated. e.g. "metabolomics"."""
 
     qualifiers: frozenset[str]
-    """Domain-specific qualifiers to add to Perspicacite's _QUALIFIERS set and
-    LLM prompt. Must not conflict with the base 20-qualifier set in indicium."""
+    """Domain-specific qualifiers, unioned into Perspicacité's LLM extraction
+    prompt alongside the base 20-term Bucur set.
+
+    Each value MUST be snake_case matching ``^[a-z][a-z0-9_]*$`` — at RDF time
+    Perspicacité routes any qualifier that is NOT one of the closed Bucur
+    SuperPattern terms onto the open ``asb:domainQualifier`` slot (a domain term
+    that happens to equal a Bucur term, e.g. ``interacts_with``, rides the closed
+    ``asb:qualifier`` instead). This keeps the published Bucur enum pristine while
+    letting domain vocabularies validate; see indicium#1 / indicium 1.7.0. Any
+    SHACL shape this adapter ships for a domain qualifier must therefore key on
+    ``asb:domainQualifier``, not ``asb:qualifier``."""
 
     ontology_prefixes: dict[str, str]
     """Prefix → base IRI mapping, e.g. {"CHEBI": "http://purl.obolibrary.org/obo/CHEBI_"}.
