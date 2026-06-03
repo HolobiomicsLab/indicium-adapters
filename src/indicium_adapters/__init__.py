@@ -63,7 +63,24 @@ class DomainAdapter(Protocol):
     def enrich_claim(self, claim: dict) -> dict:
         """Receive a validated 5-slot claim dict; return a new dict (never mutate
         input). May add an "ontology_terms" sub-dict mapping slot names to CURIEs
-        e.g. {"subject": "CHEBI:14321"}. Must be a pure function (no I/O)."""
+        e.g. ``{"subject": "CHEBI:14321"}``. Must be a pure function (no I/O).
+
+        **Optional companion map — ontology_term_justifications**
+
+        An adapter MAY also set ``ontology_term_justifications: dict[str, str]``
+        on the returned claim, using the same slot keys as ``ontology_terms``
+        (e.g. ``"subject"``, ``"object"``).  Each value is a SEMAPV justification
+        CURIE that describes *how* the ontology term was resolved, for example:
+
+        * ``semapv:CompositeMatching``  — curated / rule-based identifier lookup
+        * ``semapv:LexicalMatching``    — name or synonym string match
+        * ``semapv:ManualMappingCuration`` — hand-curated assignment
+
+        Downstream SSSOM emitters (e.g. Perspicacité) turn ``ontology_terms``
+        into first-class ``sssom:MappingSet`` rows and use
+        ``ontology_term_justifications`` as the ``mapping_justification``
+        predicate value.  When the key is absent the emitter defaults to
+        ``semapv:CompositeMatching``."""
         ...
 
 

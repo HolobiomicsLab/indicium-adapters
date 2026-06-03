@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- Convention: `DomainAdapter.enrich_claim()` MAY set an `ontology_term_justifications: dict[str, str]` companion map alongside `ontology_terms`, mapping the same slot keys to SEMAPV justification CURIEs (e.g. `semapv:CompositeMatching`, `semapv:LexicalMatching`). Downstream SSSOM emitters (Perspicacité) use this as `mapping_justification`; absent keys default to `semapv:CompositeMatching`. Documented in `enrich_claim` docstring and README.
+
+---
+
 ## 0.5.0 — 2026-05-24
 
 ### Added
