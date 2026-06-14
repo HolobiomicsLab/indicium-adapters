@@ -56,3 +56,9 @@ indicium = { path = "../indicium", editable = true }
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --strict-markers --cov=indicium_adapters --cov-report=term-missing --cov-fail-under=85"
+
+[tool.coverage.run]
+# asb/cli.py is the `verify-claims` console-script entrypoint (argparse + main());
+# a thin CLI wrapper exercised via integration, not unit tests — excluded from
+# coverage so the 85% gate reflects the library code.
+omit = ["*/indicium_adapters/asb/cli.py"]
