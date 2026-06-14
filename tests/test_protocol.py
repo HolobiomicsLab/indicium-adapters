@@ -3,10 +3,23 @@
 Discovery tests (requiring installed entry-points) are in the same file
 but isolated so they can be skipped when entry-points aren't registered.
 """
+import importlib.util
 import warnings
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from indicium_adapters import DomainAdapter, discover_adapters
+
+# Discovering a real domain adapter (metabolomics) needs the separate
+# indicium-adapters-metabolomics package installed so its entry-point registers.
+# Isolated CI doesn't install it, so these tests skip there (per this module's
+# docstring) and run fully in a complete-hub install.
+_HAS_METABOLOMICS = importlib.util.find_spec("indicium_adapters_metabolomics") is not None
+requires_metabolomics = pytest.mark.skipif(
+    not _HAS_METABOLOMICS,
+    reason="indicium-adapters-metabolomics not installed (cross-repo discovery test)",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -98,6 +111,7 @@ def test_discover_adapters_domain_ids_are_lowercase_no_spaces():
 # Discovery — requires installed entry-point (run 'uv sync --extra dev' to register)
 # ---------------------------------------------------------------------------
 
+@requires_metabolomics
 def test_discover_adapters_finds_metabolomics():
     """After installation, discover_adapters() must return the metabolomics adapter."""
     adapters = discover_adapters()
@@ -107,6 +121,7 @@ def test_discover_adapters_finds_metabolomics():
     )
 
 
+@requires_metabolomics
 def test_discovered_metabolomics_satisfies_protocol():
     """Discovered metabolomics adapter must satisfy the DomainAdapter protocol."""
     adapters = discover_adapters()
@@ -114,6 +129,7 @@ def test_discovered_metabolomics_satisfies_protocol():
     assert isinstance(adapters["metabolomics"], DomainAdapter)
 
 
+@requires_metabolomics
 def test_discovered_metabolomics_domain_id():
     """Discovered metabolomics adapter must report domain_id == 'metabolomics'."""
     adapters = discover_adapters()
@@ -133,6 +149,7 @@ def test_current_api_version_exported():
     assert CURRENT_API_VERSION == 1
 
 
+@requires_metabolomics
 def test_metabolomics_has_api_version():
     """Discovered metabolomics adapter must have api_version == CURRENT_API_VERSION.
 
