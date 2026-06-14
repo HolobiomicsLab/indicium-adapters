@@ -32,7 +32,9 @@ jobs:
           python -m pip install --upgrade pip
           # indicium isn't on PyPI yet; install from git
           pip install git+https://github.com/HolobiomicsLab/indicium.git@main
-          pip install -e .[dev] || pip install -e .
+          # .[asb] brings httpx + pydantic + pyyaml for the src/indicium_adapters/asb
+          # submodule that tests/asb exercises; .[dev] brings pytest/pytest-cov/pyshacl.
+          pip install -e .[dev,asb] || pip install -e .
           pip install pytest pytest-cov ruff
       - name: Lint
         run: ruff check . || true
