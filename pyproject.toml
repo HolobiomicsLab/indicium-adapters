@@ -4,9 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "indicium-adapters"
-version = "0.5.0"
+version = "0.6.0"
 requires-python = ">=3.12"
 description = "Community-extensible domain adapters for the indicium knowledge standard"
+license = {file = "LICENSE"}
 authors = [{name = "Louis-Felix Nothias", email = "louis-felix.nothias@cnrs.fr"}]
 keywords = ["indicium", "knowledge-graph", "rdf", "shacl", "domain-adapter", "protocol"]
 classifiers = [
@@ -22,7 +23,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 dependencies = [
-    "indicium>=1.7",
+    "indicium-standard>=2.0.0",
     "rdflib>=7.0",
 ]
 
@@ -51,7 +52,7 @@ verify-claims = "indicium_adapters.asb.cli:main"
 packages = ["src/indicium_adapters"]
 
 [tool.uv.sources]
-indicium = { path = "../indicium", editable = true }
+indicium-standard = { path = "../indicium", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

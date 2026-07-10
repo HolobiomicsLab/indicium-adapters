@@ -182,43 +182,11 @@ wheels = [
 ]
 
 [[package]]
-name = "indicium"
-version = "1.12.0"
-source = { editable = "../indicium" }
-dependencies = [
-    { name = "pyshacl" },
-    { name = "rdflib" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "linkml", marker = "extra == 'codegen'", specifier = ">=1.8" },
-    { name = "linkml-runtime", marker = "extra == 'codegen'", specifier = ">=1.8" },
-    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
-    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.25" },
-    { name = "pyshacl", specifier = ">=0.26" },
-    { name = "pyyaml", marker = "extra == 'astra'", specifier = ">=6.0" },
-    { name = "pyyaml", marker = "extra == 'codegen'", specifier = ">=6.0" },
-    { name = "rdflib", specifier = ">=7.0" },
-]
-provides-extras = ["codegen", "astra", "docs"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "linkml", specifier = ">=1.8" },
-    { name = "linkml-runtime", specifier = ">=1.8" },
-    { name = "mkdocs-material", specifier = ">=9.5" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.25" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
-]
-
-[[package]]
 name = "indicium-adapters"
-version = "0.5.0"
+version = "0.6.0"
 source = { editable = "." }
 dependencies = [
-    { name = "indicium" },
+    { name = "indicium-standard" },
     { name = "rdflib" },
 ]
 
@@ -237,7 +205,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", marker = "extra == 'asb'", specifier = ">=0.27" },
-    { name = "indicium", editable = "../indicium" },
+    { name = "indicium-standard", editable = "../indicium" },
     { name = "pydantic", marker = "extra == 'asb'", specifier = ">=2.6" },
     { name = "pyshacl", marker = "extra == 'dev'", specifier = ">=0.26" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
@@ -246,6 +214,40 @@ requires-dist = [
     { name = "rdflib", specifier = ">=7.0" },
 ]
 provides-extras = ["dev", "asb"]
+
+[[package]]
+name = "indicium-standard"
+version = "2.0.0"
+source = { editable = "../indicium" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pyshacl" },
+    { name = "rdflib" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "linkml", marker = "extra == 'codegen'", specifier = ">=1.8" },
+    { name = "linkml-runtime", marker = "extra == 'codegen'", specifier = ">=1.8" },
+    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
+    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.25" },
+    { name = "pydantic", specifier = ">=2.0" },
+    { name = "pyshacl", specifier = ">=0.26" },
+    { name = "pyyaml", marker = "extra == 'astra'", specifier = ">=6.0" },
+    { name = "pyyaml", marker = "extra == 'codegen'", specifier = ">=6.0" },
+    { name = "rdflib", specifier = ">=7.0" },
+]
+provides-extras = ["codegen", "astra", "docs"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "linkml", specifier = ">=1.8" },
+    { name = "linkml-runtime", specifier = ">=1.8" },
+    { name = "mkdocs-material", specifier = ">=9.5" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.25" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
+]
 
 [[package]]
 name = "iniconfig"
