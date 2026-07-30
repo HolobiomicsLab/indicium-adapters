@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`requires-python` lowered from `>=3.12` to `>=3.11`.** Nothing in the package
+  needed 3.12: all 24 source and test modules parse under 3.11 (no PEP 695 type-parameter
+  syntax, no `type` alias statements), there is no 3.12-only stdlib API in use, and the
+  only runtime dependency, `indicium-standard`, already declares `>=3.11`. The full test
+  suite passes unchanged on 3.11 — 73 passed, 4 skipped, 90.31% coverage.
+
+  The floor mattered because it made every `DomainAdapter` uninstallable in the
+  AgenticScienceBuilder environment, which runs Python 3.11 and is where the
+  classification vocabulary adapters feed is actually consumed. With the floor lowered,
+  installing `indicium-adapters` plus `indicium-adapters-astronomy` into that
+  environment takes ASB's controlled vocabulary from 17 primary domains to 18, adding
+  `astronomy` along with its 11 subdomains and its techniques — previously an astronomy
+  paper classified as `other` no matter what.
+
+- Dropped the `Programming Language :: Python :: 3.10` classifier. It advertised a
+  version that could never resolve, since `indicium-standard` requires `>=3.11`.
+
+## [Unreleased]
+
 ### Added
 - Convention: `DomainAdapter.enrich_claim()` MAY set an `ontology_term_justifications: dict[str, str]` companion map alongside `ontology_terms`, mapping the same slot keys to SEMAPV justification CURIEs (e.g. `semapv:CompositeMatching`, `semapv:LexicalMatching`). Downstream SSSOM emitters (Perspicacité) use this as `mapping_justification`; absent keys default to `semapv:CompositeMatching`. Documented in `enrich_claim` docstring and README.
 
