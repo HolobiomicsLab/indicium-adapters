@@ -1,11 +1,19 @@
 """indicium-adapters — shared domain knowledge layer for the indicium ecosystem.
 
-Defines the DomainAdapter structural Protocol, the SHACLProvider opt-in mixin,
-and the discover_adapters() entry-point discovery function.
+Defines the DomainAdapter structural Protocol, the SHACLProvider and
+ClassificationVocabularyProvider opt-in mixins, and the discover_adapters()
+entry-point discovery function.
+
+An adapter package is the ONE legitimate home for domain-specific vocabulary:
+qualifiers, ontology prefixes, and the classification terms declared through
+ClassificationVocabularyProvider. This package holds the mechanism only and
+names no science anywhere — consumers must read declarations off the adapter,
+never branch on a domain name.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import rdflib
@@ -26,6 +34,13 @@ class DomainAdapter(Protocol):
     Third-party implementations do NOT need to import this class.
     Any class that has these five attributes satisfies
     ``isinstance(obj, DomainAdapter)``.
+
+    ``primary_domain`` / ``subdomains`` / ``techniques`` are OPTIONAL members
+    documented on :class:`ClassificationVocabularyProvider`. They are declared
+    there, not here, on purpose: a runtime-checkable Protocol has no notion of
+    an optional member, so listing them above would make every adapter that
+    omits them fail ``isinstance(obj, DomainAdapter)``. Read them with
+    :func:`classification_vocabulary`.
     """
 
     domain_id: str
@@ -97,6 +112,88 @@ class SHACLProvider(DomainAdapter, Protocol):
     def shacl_shapes(self) -> rdflib.Graph: ...
 
 
+@runtime_checkable
+class ClassificationVocabularyProvider(DomainAdapter, Protocol):
+    """Optional mixin: adapters that declare curated classification vocabulary.
+
+    Implement this in addition to DomainAdapter to say which SCIENCE the adapter
+    serves and which terms belong to it. All three members are CURATED by a
+    domain expert and versioned with the adapter — declarations, never data
+    derived from a corpus, a tool registry or a model.
+
+    Declaring nothing is legitimate: an ancillary adapter (a knowledge-graph or
+    infrastructure helper) serves no science of its own and must stay silent
+    rather than inject its own name as one.
+
+    Consumers read the triple through :func:`classification_vocabulary` and
+    treat every term as opaque; the consuming mechanism stays domain-neutral.
+    """
+
+    primary_domain: str
+    """The science this adapter serves — the field a paper would be filed under.
+
+    SEVERAL adapters MAY share one ``primary_domain``: variants of a single
+    science (differing in assay, scale or platform) declare the same value, so
+    the science enters the vocabulary once and the variants do not surface as
+    top-level sciences.
+
+    Distinct from ``domain_id``, which remains the adapter's OWN identity — one
+    per installed package, and the discover_adapters() key. A consumer that
+    falls back to ``domain_id`` when ``primary_domain`` is missing publishes an
+    adapter name as though it were a science; declare ``primary_domain``
+    instead of relying on such a fallback."""
+
+    subdomains: tuple[str, ...]
+    """Curated sub-fields OF ``primary_domain``, one granularity below it.
+
+    Kebab-case terms. A subdomain narrows the science; it never names another
+    science, and never names a technique."""
+
+    techniques: tuple[str, ...]
+    """Curated experimental or analytical techniques used within the science.
+
+    Kebab-case terms naming HOW work is done (instruments, assays, methods),
+    as opposed to WHAT is studied."""
+
+
+@dataclass(frozen=True)
+class ClassificationVocabulary:
+    """What one adapter declares for classification, reported honestly.
+
+    ``primary_domain is None`` is the explicit "this adapter declared no
+    science" status. It is NOT a licence to substitute the adapter's
+    ``domain_id``, and it is not the same as an adapter that declared one.
+    """
+
+    primary_domain: str | None
+    subdomains: tuple[str, ...]
+    techniques: tuple[str, ...]
+
+
+def _declared_terms(declared: object, member: str) -> tuple[str, ...]:
+    """Normalise one declared term collection to a tuple of strings."""
+    if not declared:
+        return ()
+    if isinstance(declared, str):
+        raise TypeError(f"{member} must be a collection of terms, not a str")
+    return tuple(str(term) for term in declared)
+
+
+def classification_vocabulary(adapter: DomainAdapter) -> ClassificationVocabulary:
+    """Read the classification vocabulary an adapter declares, if any.
+
+    Domain-neutral: reads the declaration off the adapter, invents no terms,
+    and never substitutes ``domain_id`` for an absent ``primary_domain``.
+    Raises TypeError if a term collection is declared as a bare string.
+    """
+    primary = getattr(adapter, "primary_domain", None)
+    return ClassificationVocabulary(
+        primary_domain=str(primary) if primary else None,
+        subdomains=_declared_terms(getattr(adapter, "subdomains", None), "subdomains"),
+        techniques=_declared_terms(getattr(adapter, "techniques", None), "techniques"),
+    )
+
+
 def discover_adapters() -> dict[str, DomainAdapter]:
     """Return all installed DomainAdapters keyed by domain_id.
 
@@ -147,11 +244,38 @@ def __getattr__(name: str):
 
 
 __all__ = [
-    "ASBAdapter",
     "CURRENT_API_VERSION",
+    "ASBAdapter",
+    "ClassificationVocabulary",
+    "ClassificationVocabularyProvider",
     "CompositeAdapter",
     "DomainAdapter",
     "SHACLProvider",
+    "classification_vocabulary",
     "compose_adapters",
     "discover_adapters",
 ]
+
+
+if __name__ == "__main__":  # offline smoke check
+    class _Probe:
+        """Five-member adapter that declares no classification vocabulary."""
+
+        domain_id = "probe-adapter"
+        qualifiers = frozenset()
+        ontology_prefixes: ClassVar[dict[str, str]] = {}
+        api_version = CURRENT_API_VERSION
+
+        def extraction_context(self) -> str:
+            return ""
+
+        def enrich_claim(self, claim: dict) -> dict:
+            return dict(claim)
+
+    _probe = _Probe()
+    assert isinstance(_probe, DomainAdapter)
+    assert not isinstance(_probe, ClassificationVocabularyProvider)
+    _vocab = classification_vocabulary(_probe)
+    assert _vocab.primary_domain is None
+    assert _vocab.subdomains == () and _vocab.techniques == ()
+    print("indicium_adapters smoke: ok")
