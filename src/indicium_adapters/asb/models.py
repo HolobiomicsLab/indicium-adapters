@@ -93,6 +93,8 @@ class ASBClaimRecord(BaseModel):
     model_config = _MODEL_CONFIG
 
     claim_id: str = Field(min_length=1)
+    # The SuperPattern context slot; the indicium asb:Claim shape requires it.
+    context: str | None = None
     subject: str = Field(min_length=1)
     predicate: str = Field(min_length=1)
     object: str = Field(min_length=1)

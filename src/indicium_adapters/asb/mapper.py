@@ -124,11 +124,14 @@ def claim_to_triples(claim) -> list[Triple]:
     """Emit an indicium ``asb:Claim`` with its subject, relation and object.
 
     The record's ``predicate`` fills ``asb:relation``, the slot the
-    indicium shape declares for it.
+    indicium shape declares for it. Its ``context``, when present, fills
+    ``asb:context``; none is invented when the record has none.
     """
     triples: list[Triple] = []
     iri = rdflib.URIRef(claim.claim_id)
     triples.append((iri, RDF.type, ASB_VOCAB.Claim))
+    if claim.context:
+        triples.append((iri, ASB_VOCAB.context, rdflib.Literal(claim.context)))
     triples.append((iri, ASB_VOCAB.subject, rdflib.Literal(claim.subject)))
     triples.append((iri, ASB_VOCAB.relation, rdflib.Literal(claim.predicate)))
     triples.append((iri, ASB_VOCAB.object, rdflib.Literal(claim.object)))

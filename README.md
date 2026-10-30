@@ -172,7 +172,7 @@ OK - 0 claim(s) resolved in 1 skill(s); 1 listed, 0 skipped.
 
 The loader reads two layouts. In the current one, `collection.yaml` lists skill and tool slugs, leaf skills sit in `leaves/<slug>/SKILL.md` and tools in `tools/<slug>.yaml`. In the earlier one, the index lists mappings with a `path` or a `slug`. The JSON output carries `unresolved`, `resolved_count`, `skills_listed` (entries under `skills` in `collection.yaml`), `skills_checked` (skills read), `skills_skipped` (slug and reason per skill not read) and `skills_with_unlisted_claims`; a pass with `skills_checked` at 0 read nothing.
 
-Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from a copied string. A claim is typed `asb:Claim` with `asb:subject`, `asb:relation` and `asb:object`; a qualifier rides `asb:qualifier` when it is a closed Bucur term and `asb:domainQualifier` otherwise. Skill and tool IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/` and `.../asb-tool/` form that ASB mints.
+Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from a copied string. A claim is typed `asb:Claim` with `asb:subject`, `asb:relation` and `asb:object`, plus `asb:context` when its record has a `context`; a qualifier rides `asb:qualifier` when it is a closed Bucur term and `asb:domainQualifier` otherwise. Skill and tool IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/` and `.../asb-tool/` form that ASB mints.
 
 ## Scope
 
@@ -183,7 +183,7 @@ Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from 
 Known limitations of `indicium_adapters.asb`:
 
 - Only claims use terms the indicium schema declares. Evidence, software, source and skill nodes use this mapper's own local names under `INDICIUM_BASE`, for example `exactQuote` where indicium declares `quote_exact`.
-- A mapped claim has no `asb:context`, which the `asb:Claim` shape requires, because ASB claim records carry none. Validation reports that violation.
+- A claims-file record without `context` maps to a claim without `asb:context`, which the `asb:Claim` shape requires; validation reports that violation. ASB's own claims carry a context, and the mapper writes it when the record has one.
 - Current tool records carry `repo_url`, not `canonical_url`, so the bio.tools resolver has nothing to look up for them.
 - No SKILL.md in the metabolomics v2 collection of [asb-skill-collections](https://github.com/HolobiomicsLab/asb-skill-collections) lists a claim IRI yet: `verify-claims` reads its 5859 skills and passes with 0 claims resolved.
 

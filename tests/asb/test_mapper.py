@@ -168,6 +168,37 @@ def test_mapped_claim_is_evaluated_by_the_indicium_shapes() -> None:
         assert f"Result Path: asb:{slot}\n" not in report
 
 
+def test_claim_context_fills_the_asb_context_the_shape_requires() -> None:
+    claim = ASBClaimRecord(
+        claim_id="https://example.org/claim/01",
+        subject="s",
+        predicate="p",
+        object="o",
+        qualifiers=["increases"],
+        context="in human plasma",
+    )
+    graph = rdflib.Graph()
+    for t in claim_to_triples(claim):
+        graph.add(t)
+    iri = rdflib.URIRef(claim.claim_id)
+    assert (iri, ASB_VOCAB.context, rdflib.Literal("in human plasma")) in graph
+    conforms, report = indicium.validate_graph(graph)
+    assert conforms, report
+
+
+def test_claim_without_context_is_reported_by_the_indicium_shapes() -> None:
+    """No context is invented: the shape reports the missing asb:context."""
+    claim = ASBClaimRecord(
+        claim_id="https://example.org/claim/01", subject="s", predicate="p", object="o"
+    )
+    graph = rdflib.Graph()
+    for t in claim_to_triples(claim):
+        graph.add(t)
+    conforms, report = indicium.validate_graph(graph)
+    assert not conforms
+    assert "Result Path: asb:context\n" in report
+
+
 def test_paper_without_title_emits_no_empty_title() -> None:
     paper = ASBSourcePaper(doi="10.1/abc", title="")
     triples = paper_to_information_source_triples(paper)

@@ -34,6 +34,11 @@ tag is `v0.4.0`, and no version has been published to a package index.
   slug and reason of each listed skill that has no SKILL.md or fails validation.
   The loader keeps such skills in `ASBCollection.skipped_skills` (new model
   `ASBSkippedSkill`) instead of dropping them.
+- `ASBClaimRecord.context`, the SuperPattern context slot. The mapper writes it as
+  `asb:context`, which the indicium `asb:Claim` shape requires, when the record has
+  one. An earlier entry and the body of commit 8ebaff0 said ASB claim records carry
+  no context; ASB's own claims do, and it was this package's record that lacked the
+  field.
 - `RoundTripResult.skills_with_unlisted_claims`: skills whose frontmatter declares
   `n_claims` above 0 but lists no claim IRI. `verify-claims` returns it in its JSON
   and prints a warning on stderr; it does not fail the gate. `ASBSkillRecord` reads
@@ -122,8 +127,9 @@ tag is `v0.4.0`, and no version has been published to a package index.
   and skill nodes and their properties use this mapper's local names under
   `INDICIUM_BASE` (for example `exactQuote`, where indicium declares
   `quote_exact`).
-- A mapped claim lacks `asb:context`, which the `asb:Claim` shape requires; ASB
-  claim records carry no context. The shape therefore reports a violation.
+- A claims-file record without `context` maps to a claim without `asb:context`,
+  which the `asb:Claim` shape requires, and the shape reports a violation. ASB's
+  own claims carry a context; the mapper writes it when the record has one.
 - Current tool records carry `repo_url`, not `canonical_url`, so the bio.tools
   resolver has nothing to look up for them.
 - `uv lock` and `uv sync` need the indicium checkout beside this one:
