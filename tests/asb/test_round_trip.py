@@ -43,3 +43,19 @@ def test_round_trip_raises_when_fail_on_missing(tmp_path: Path) -> None:
             FIXTURE, _load(GRAPH_BROKEN), fail_on_missing=True
         )
     assert "claim/01" in str(excinfo.value)
+
+
+SLUG_LIST = Path(__file__).parent / "fixtures" / "slug_list_collection"
+
+
+def test_round_trip_reads_slug_list_collection() -> None:
+    """The gate runs on the current layout and says how many skills it read."""
+    result = run_round_trip_check(SLUG_LIST, _load(GRAPH_OK))
+    assert result.ok is True
+    assert result.resolved_count == 1
+    assert result.skills_checked == 2
+
+
+def test_round_trip_reports_dangling_claim_in_slug_list_collection() -> None:
+    result = run_round_trip_check(SLUG_LIST, _load(GRAPH_BROKEN))
+    assert [u.skill_slug for u in result.unresolved] == ["skill-with-claim"]

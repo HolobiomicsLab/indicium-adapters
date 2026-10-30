@@ -33,11 +33,16 @@ class RoundTripResult:
     ok: bool
     unresolved: list[UnresolvedClaim] = field(default_factory=list)
     resolved_count: int = 0
+    # Skills read from disk: shows a pass that checked nothing.
+    skills_checked: int = 0
 
     def render(self) -> str:
         if self.ok:
-            return f"round-trip OK — {self.resolved_count} claim(s) resolved"
-        lines = ["round-trip FAIL — unresolved claim IRIs:"]
+            return (
+                f"round-trip OK - {self.resolved_count} claim(s) resolved "
+                f"in {self.skills_checked} skill(s)"
+            )
+        lines = ["round-trip FAIL - unresolved claim IRIs:"]
         for u in self.unresolved:
             lines.append(f"  - {u.skill_slug}: {u.claim_iri}")
         return "\n".join(lines)
@@ -70,7 +75,10 @@ def run_round_trip_check(
             else:
                 resolved_count += 1
     result = RoundTripResult(
-        ok=not unresolved, unresolved=unresolved, resolved_count=resolved_count
+        ok=not unresolved,
+        unresolved=unresolved,
+        resolved_count=resolved_count,
+        skills_checked=len(coll.skills),
     )
     if fail_on_missing and not result.ok:
         raise AssertionError(result.render())

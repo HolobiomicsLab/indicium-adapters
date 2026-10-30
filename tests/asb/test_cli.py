@@ -47,3 +47,29 @@ def test_cli_pretty_format_is_human_readable() -> None:
     )
     assert result.returncode == 0
     assert "resolved" in result.stdout.lower()
+
+
+SLUG_LIST = Path(__file__).parent / "fixtures" / "slug_list_collection"
+
+
+def test_cli_reports_skills_checked_on_slug_list_collection() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "indicium_adapters.asb.cli",
+         "--collection", str(SLUG_LIST),
+         "--indicium-graph", str(GRAPH_OK),
+         "--format", "json"],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload == {"unresolved": [], "resolved_count": 1, "skills_checked": 2}
+
+
+def test_cli_pretty_format_names_skills_checked() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "indicium_adapters.asb.cli",
+         "--collection", str(SLUG_LIST),
+         "--indicium-graph", str(GRAPH_OK)],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.stdout.strip() == "OK - 1 claim(s) resolved in 2 skill(s)."

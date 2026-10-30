@@ -18,6 +18,11 @@ Exit codes:
 - 0: all claim URIs resolve; release may proceed.
 - 1: one or more URIs dangle; release blocked. JSON stdout lists them.
 - 2: invocation error (missing file, bad args).
+
+JSON stdout carries ``unresolved`` (``skill_slug`` and ``claim_iri`` per
+dangling reference), ``resolved_count`` and ``skills_checked``, the number
+of skills read from disk. A pass with ``skills_checked`` at 0 checked
+nothing.
 """
 from __future__ import annotations
 
@@ -39,11 +44,14 @@ def _load_graph(path: Path) -> Graph:
 
 def _emit_pretty(result) -> None:
     if result.unresolved:
-        print(f"FAIL — {len(result.unresolved)} dangling claim URI(s):")
+        print(f"FAIL - {len(result.unresolved)} dangling claim URI(s):")
         for uri in result.unresolved:
             print(f"  - {uri}")
     else:
-        print(f"OK — {result.resolved_count} claim(s) resolved.")
+        print(
+            f"OK - {result.resolved_count} claim(s) resolved "
+            f"in {result.skills_checked} skill(s)."
+        )
 
 
 def _emit_json(result) -> None:
@@ -54,6 +62,7 @@ def _emit_json(result) -> None:
                 for u in result.unresolved
             ],
             "resolved_count": result.resolved_count,
+            "skills_checked": result.skills_checked,
         },
         sys.stdout,
     )

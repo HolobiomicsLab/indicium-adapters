@@ -9,14 +9,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 _MODEL_CONFIG = ConfigDict(
     extra="ignore",          # tolerate forward-compatible additions
     str_strip_whitespace=True,
     frozen=False,
 )
+
+
+# Current releases write a record's papers under ``derived_from``.
+_SOURCE_PAPERS_KEYS = AliasChoices("source_papers", "derived_from")
 
 
 class ASBEvidenceSpan(BaseModel):
@@ -29,6 +39,12 @@ class ASBEvidenceSpan(BaseModel):
     source_doi: str | None = None
     paragraph_id: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _from_plain_quote(cls, value: Any) -> Any:
+        """Accept a bare string, the form current releases write a span in."""
+        return {"quote": value} if isinstance(value, str) else value
+
 
 class ASBSourcePaper(BaseModel):
     """A paper that contributed to a skill / tool / claim."""
@@ -36,7 +52,8 @@ class ASBSourcePaper(BaseModel):
     model_config = _MODEL_CONFIG
 
     doi: str = Field(min_length=1)
-    title: str = Field(min_length=1)
+    # Empty when the release could not resolve the title; the DOI identifies.
+    title: str = ""
 
     @field_validator("doi", mode="before")
     @classmethod
@@ -65,7 +82,9 @@ class ASBToolRecord(BaseModel):
     edam_operation: str = ""
     edam_topics: list[str] = Field(default_factory=list)
     evidence_spans: list[ASBEvidenceSpan] = Field(default_factory=list)
-    source_papers: list[ASBSourcePaper] = Field(default_factory=list)
+    source_papers: list[ASBSourcePaper] = Field(
+        default_factory=list, validation_alias=_SOURCE_PAPERS_KEYS
+    )
 
 
 class ASBClaimRecord(BaseModel):
@@ -80,7 +99,9 @@ class ASBClaimRecord(BaseModel):
     qualifiers: list[str] = Field(default_factory=list)
     super_pattern: str | None = None
     evidence_spans: list[ASBEvidenceSpan] = Field(default_factory=list)
-    source_papers: list[ASBSourcePaper] = Field(default_factory=list)
+    source_papers: list[ASBSourcePaper] = Field(
+        default_factory=list, validation_alias=_SOURCE_PAPERS_KEYS
+    )
 
 
 class ASBSkillRecord(BaseModel):
@@ -96,7 +117,9 @@ class ASBSkillRecord(BaseModel):
     edam_topics: list[str] = Field(default_factory=list)
     related_tools: list[str] = Field(default_factory=list)
     evidence_spans: list[ASBEvidenceSpan] = Field(default_factory=list)
-    source_papers: list[ASBSourcePaper] = Field(default_factory=list)
+    source_papers: list[ASBSourcePaper] = Field(
+        default_factory=list, validation_alias=_SOURCE_PAPERS_KEYS
+    )
     claim_ids: list[str] = Field(default_factory=list)
 
 

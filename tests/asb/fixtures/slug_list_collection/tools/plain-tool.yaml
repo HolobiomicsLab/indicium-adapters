@@ -1,0 +1,9 @@
+name: Plain Tool
+slug: plain-tool
+evidence_spans:
+- The runs were processed with Plain Tool.
+derived_from:
+- doi: 10.1000/example.1
+  title: An example method paper
+schema_version: 0.2.0
+repo_url: https://example.org/plain-tool

@@ -6,3 +6,9 @@
     indicium:subject "MZmine ADAP-3D" ;
     indicium:predicate "detects" ;
     indicium:object "chromatographic features in LC-MS data" .
+
+<https://w3id.org/holobiomicslab/asb-skill/skill-with-claim/claim/01>
+    rdf:type indicium:Claim ;
+    indicium:subject "an example method" ;
+    indicium:predicate "aligns" ;
+    indicium:object "the converted runs" .
