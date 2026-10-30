@@ -27,6 +27,7 @@ from indicium_adapters.asb.biotools import BioToolsResolver
 from indicium_adapters.asb.loader import load_collection
 from indicium_adapters.asb.mapper import (
     ASB,
+    ASB_VOCAB,
     ASBTOOL,
     BIOTOOLS,
     CITO,
@@ -40,6 +41,9 @@ from indicium_adapters.asb.mapper import (
     tool_to_software_entity_triples,
 )
 from indicium_adapters.asb.prov import ProvEnvelope, attach_prov
+
+# Bases of every class the mapper types a node with.
+_MAPPED_TYPE_BASES = (str(INDICIUM), str(ASB_VOCAB), str(SEPIO))
 
 
 class ASBAdapter:
@@ -69,10 +73,11 @@ class ASBAdapter:
 
         g = rdflib.Graph()
         g.bind("indicium", INDICIUM)
+        g.bind("asb", ASB_VOCAB)
         g.bind("eco", ECO)
         g.bind("cito", CITO)
         g.bind("sepio", SEPIO)
-        g.bind("asb", ASB)
+        g.bind("asbskill", ASB)
         g.bind("asbtool", ASBTOOL)
         g.bind("biotools", BIOTOOLS)
 
@@ -104,15 +109,11 @@ class ASBAdapter:
                 for t in paper_to_information_source_triples(paper):
                     g.add(t)
 
-        # Wrap every typed indicium node + every SEPIO assertion in PROV.
+        # Wrap every node typed by this mapper in PROV.
         typed_subjects = {
             s
             for s, _, o in g.triples((None, RDF.type, None))
-            if isinstance(o, rdflib.URIRef)
-            and (
-                str(o).startswith(str(INDICIUM))
-                or str(o).startswith(str(SEPIO))
-            )
+            if str(o).startswith(_MAPPED_TYPE_BASES)
         }
         for s in typed_subjects:
             attach_prov(g, s, envelope)

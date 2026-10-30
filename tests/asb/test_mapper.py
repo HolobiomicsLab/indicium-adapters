@@ -1,11 +1,13 @@
 """Tests for the pure mapper functions."""
 from __future__ import annotations
 
+import indicium
 import rdflib
 from rdflib.namespace import RDF
 
 from indicium_adapters.asb.mapper import (
     ASB,
+    ASB_VOCAB,
     ASBTOOL,
     BIOTOOLS,
     CITO,
@@ -81,7 +83,7 @@ def test_claim_to_triples_emits_class_and_super_pattern() -> None:
     )
     triples = claim_to_triples(claim)
     iri = rdflib.URIRef(claim.claim_id)
-    assert _has(triples, iri, RDF.type, INDICIUM.Claim)
+    assert _has(triples, iri, RDF.type, rdflib.URIRef(indicium.asb_term("Claim")))
     assert _has(
         triples,
         iri,
@@ -114,3 +116,59 @@ def test_paper_to_information_source_triples() -> None:
     assert _has(triples, iri, RDF.type, INDICIUM.InformationSource)
     assert _has(triples, iri, CITO.hasIdentifier, rdflib.Literal("10.1/abc"))
     assert _has(triples, iri, INDICIUM.title, rdflib.Literal("t"))
+
+
+def test_vocabulary_bases_come_from_indicium() -> None:
+    """A copied base string would drift when indicium moves its namespace."""
+    assert str(ASB_VOCAB) == indicium.ASB_BASE
+    assert str(INDICIUM) == indicium.INDICIUM_BASE
+
+
+def test_claim_slots_use_the_asb_claim_shape_terms() -> None:
+    claim = ASBClaimRecord(
+        claim_id="https://example.org/claim/01", subject="s", predicate="p", object="o"
+    )
+    triples = claim_to_triples(claim)
+    iri = rdflib.URIRef(claim.claim_id)
+    assert _has(triples, iri, ASB_VOCAB.subject, rdflib.Literal("s"))
+    assert _has(triples, iri, ASB_VOCAB.relation, rdflib.Literal("p"))
+    assert _has(triples, iri, ASB_VOCAB.object, rdflib.Literal("o"))
+
+
+def test_claim_qualifiers_route_like_the_domain_adapter_contract() -> None:
+    """A closed Bucur term rides asb:qualifier, any other asb:domainQualifier."""
+    claim = ASBClaimRecord(
+        claim_id="https://example.org/claim/01",
+        subject="s",
+        predicate="p",
+        object="o",
+        qualifiers=["increases", "measured_in"],
+    )
+    triples = claim_to_triples(claim)
+    iri = rdflib.URIRef(claim.claim_id)
+    assert _has(triples, iri, ASB_VOCAB.qualifier, rdflib.Literal("increases"))
+    assert _has(triples, iri, ASB_VOCAB.domainQualifier, rdflib.Literal("measured_in"))
+
+
+def test_mapped_claim_is_evaluated_by_the_indicium_shapes() -> None:
+    """Typed asb:Claim, the claim is a focus node; its mapped slots conform."""
+    claim = ASBClaimRecord(
+        claim_id="https://example.org/claim/01",
+        subject="s",
+        predicate="p",
+        object="o",
+        qualifiers=["increases"],
+    )
+    graph = rdflib.Graph()
+    for t in claim_to_triples(claim):
+        graph.add(t)
+    _, report = indicium.validate_graph(graph)
+    assert f"Focus Node: <{claim.claim_id}>" in report
+    for slot in ("subject", "relation", "object", "qualifier"):
+        assert f"Result Path: asb:{slot}\n" not in report
+
+
+def test_paper_without_title_emits_no_empty_title() -> None:
+    paper = ASBSourcePaper(doi="10.1/abc", title="")
+    triples = paper_to_information_source_triples(paper)
+    assert not any(t[1] == INDICIUM.title for t in triples)

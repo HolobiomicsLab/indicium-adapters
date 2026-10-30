@@ -59,3 +59,17 @@ def test_round_trip_reads_slug_list_collection() -> None:
 def test_round_trip_reports_dangling_claim_in_slug_list_collection() -> None:
     result = run_round_trip_check(SLUG_LIST, _load(GRAPH_BROKEN))
     assert [u.skill_slug for u in result.unresolved] == ["skill-with-claim"]
+
+
+def test_round_trip_ignores_claims_typed_outside_indicium() -> None:
+    """Only indicium's Claim class counts; another class does not resolve."""
+    graph = rdflib.Graph()
+    graph.parse(
+        data=(
+            "<https://w3id.org/holobiomicslab/asb-skill/feature-detection-lcms/claim/01> "
+            "a <https://example.org/vocab#Claim> ."
+        ),
+        format="turtle",
+    )
+    result = run_round_trip_check(FIXTURE, graph)
+    assert [u.skill_slug for u in result.unresolved] == ["feature-detection-lcms"]

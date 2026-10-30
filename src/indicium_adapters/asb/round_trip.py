@@ -3,8 +3,9 @@
 Called by ``asb-skill-collections`` release CI before a new collection is
 tagged. Given a collection directory and an indicium graph (Turtle / JSON-LD
 already parsed into rdflib), checks that every claim IRI referenced in every
-SKILL.md frontmatter appears as a subject of an ``indicium:Claim`` typed
-node in the graph. Any miss is a release blocker.
+SKILL.md frontmatter appears as a subject typed with indicium's Claim class
+(``asb:Claim``, read from ``indicium.ASB_BASE``). Any miss is a release
+blocker.
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ import rdflib
 from rdflib.namespace import RDF
 
 from indicium_adapters.asb.loader import load_collection
-from indicium_adapters.asb.mapper import INDICIUM
+from indicium_adapters.asb.mapper import ASB_VOCAB
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ def run_round_trip_check(
     coll = load_collection(collection_dir)
     known_claims = {
         str(s)
-        for s, _, _ in indicium_graph.triples((None, RDF.type, INDICIUM.Claim))
+        for s, _, _ in indicium_graph.triples((None, RDF.type, ASB_VOCAB.Claim))
     }
     unresolved: list[UnresolvedClaim] = []
     resolved_count = 0

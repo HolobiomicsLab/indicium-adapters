@@ -3,24 +3,40 @@
 All functions in this module are pure: no I/O, no network, no clock
 reads. Provenance (PROV envelopes) is attached one layer up in
 ``adapter.py``.
+
+Vocabulary bases are read from ``indicium``, never restated, so they
+follow the standard when it moves a namespace. A claim is typed with
+indicium's Claim class and its slots use the ``asb:`` terms the
+indicium SHACL shapes declare. The other classes and properties are
+written under indicium's ``INDICIUM_BASE`` with this mapper's own local
+names, which the indicium schema does not declare.
+
+Skill and tool instance IRIs follow the form ASB's release code mints,
+since indicium exports no base for them.
 """
 from __future__ import annotations
 
 import uuid
 
 import rdflib
+from indicium import ASB_BASE, INDICIUM_BASE, SuperPatternQualifier
 from rdflib.namespace import RDF, Namespace
 
-INDICIUM = Namespace("https://w3id.org/holobiomicslab/indicium#")
+ASB_VOCAB = Namespace(ASB_BASE)
+INDICIUM = Namespace(INDICIUM_BASE)
 ECO = Namespace("http://purl.obolibrary.org/obo/ECO_")
 CITO = Namespace("http://purl.org/spar/cito/")
 SEPIO = Namespace("http://purl.obolibrary.org/obo/SEPIO_")
 ASB_SKILL_BASE = "https://w3id.org/holobiomicslab/asb-skill/"
+ASB_TOOL_BASE = "https://w3id.org/holobiomicslab/asb-tool/"
 ASB = Namespace(ASB_SKILL_BASE)
-ASBTOOL = Namespace("https://w3id.org/holobiomicslab/asb-tool/")
+ASBTOOL = Namespace(ASB_TOOL_BASE)
 BIOTOOLS = Namespace("https://bio.tools/")
 EDAM_OP = Namespace("http://edamontology.org/operation_")
 EDAM_TOPIC = Namespace("http://edamontology.org/topic_")
+
+# The closed Bucur terms; any other qualifier is a domain qualifier.
+_BUCUR_QUALIFIERS = frozenset(q.value for q in SuperPatternQualifier)
 
 
 Triple = tuple[rdflib.term.Node, rdflib.term.Node, rdflib.term.Node]
@@ -46,7 +62,7 @@ def _eco_iri(local: str) -> rdflib.URIRef:
     return ECO[local]
 
 
-def skill_to_evidence_triples(skill) -> list[Triple]:  # noqa: ANN001 (Pydantic model)
+def skill_to_evidence_triples(skill) -> list[Triple]:
     """Emit one ``indicium:Evidence`` block per ``evidence_spans[i]``."""
     triples: list[Triple] = []
     for i, span in enumerate(skill.evidence_spans):
@@ -67,7 +83,7 @@ def skill_to_evidence_triples(skill) -> list[Triple]:  # noqa: ANN001 (Pydantic 
     return triples
 
 
-def tool_to_software_entity_triples(tool) -> list[Triple]:  # noqa: ANN001
+def tool_to_software_entity_triples(tool) -> list[Triple]:
     """Emit one ``indicium:SoftwareEntity`` per tool."""
     triples: list[Triple] = []
     iri = ASBTOOL[tool.slug]
@@ -93,16 +109,31 @@ def tool_to_software_entity_triples(tool) -> list[Triple]:  # noqa: ANN001
     return triples
 
 
-def claim_to_triples(claim) -> list[Triple]:  # noqa: ANN001
-    """Emit ``indicium:Claim`` with the Bucur 5-slot SuperPattern."""
+def _qualifier_term(qualifier: str) -> rdflib.URIRef:
+    """Route a qualifier the way the DomainAdapter contract states.
+
+    A closed Bucur SuperPattern term rides ``asb:qualifier``; any other
+    term rides the open ``asb:domainQualifier``.
+    """
+    if qualifier in _BUCUR_QUALIFIERS:
+        return ASB_VOCAB.qualifier
+    return ASB_VOCAB.domainQualifier
+
+
+def claim_to_triples(claim) -> list[Triple]:
+    """Emit an indicium ``asb:Claim`` with its subject, relation and object.
+
+    The record's ``predicate`` fills ``asb:relation``, the slot the
+    indicium shape declares for it.
+    """
     triples: list[Triple] = []
     iri = rdflib.URIRef(claim.claim_id)
-    triples.append((iri, RDF.type, INDICIUM.Claim))
-    triples.append((iri, INDICIUM.subject, rdflib.Literal(claim.subject)))
-    triples.append((iri, INDICIUM.predicate, rdflib.Literal(claim.predicate)))
-    triples.append((iri, INDICIUM.object, rdflib.Literal(claim.object)))
+    triples.append((iri, RDF.type, ASB_VOCAB.Claim))
+    triples.append((iri, ASB_VOCAB.subject, rdflib.Literal(claim.subject)))
+    triples.append((iri, ASB_VOCAB.relation, rdflib.Literal(claim.predicate)))
+    triples.append((iri, ASB_VOCAB.object, rdflib.Literal(claim.object)))
     for q in claim.qualifiers:
-        triples.append((iri, INDICIUM.qualifier, rdflib.Literal(q)))
+        triples.append((iri, _qualifier_term(q), rdflib.Literal(q)))
     if claim.super_pattern:
         triples.append(
             (iri, INDICIUM.superPattern, rdflib.Literal(claim.super_pattern))
@@ -110,7 +141,7 @@ def claim_to_triples(claim) -> list[Triple]:  # noqa: ANN001
     return triples
 
 
-def skill_claim_sepio_assertion_triples(skill) -> list[Triple]:  # noqa: ANN001
+def skill_claim_sepio_assertion_triples(skill) -> list[Triple]:
     """Emit one SEPIO assertion node per skill→claim link."""
     triples: list[Triple] = []
     for claim_iri_str in skill.claim_ids:
@@ -121,19 +152,23 @@ def skill_claim_sepio_assertion_triples(skill) -> list[Triple]:  # noqa: ANN001
     return triples
 
 
-def paper_to_information_source_triples(paper) -> list[Triple]:  # noqa: ANN001
+def paper_to_information_source_triples(paper) -> list[Triple]:
     """Emit ``indicium:InformationSource`` from a DOI."""
     triples: list[Triple] = []
     iri = rdflib.URIRef(f"https://doi.org/{paper.doi}")
     triples.append((iri, RDF.type, INDICIUM.InformationSource))
     triples.append((iri, CITO.hasIdentifier, rdflib.Literal(paper.doi)))
-    triples.append((iri, INDICIUM.title, rdflib.Literal(paper.title)))
+    if paper.title:
+        triples.append((iri, INDICIUM.title, rdflib.Literal(paper.title)))
     return triples
 
 
 __all__ = [
     "ASB",
     "ASBTOOL",
+    "ASB_SKILL_BASE",
+    "ASB_TOOL_BASE",
+    "ASB_VOCAB",
     "BIOTOOLS",
     "CITO",
     "ECO",
