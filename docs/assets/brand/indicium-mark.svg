@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="indicium-mark-title indicium-mark-desc">
+  <title id="indicium-mark-title">Indicium mark</title>
+  <desc id="indicium-mark-desc">A record sheet with three claim lines, bound by a round seal at its lower corner.</desc>
+  <g transform="translate(-15 0)">
+    <g fill="none" stroke="#00284b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M159.34 226H70Q58 226 58 214V40Q58 28 70 28H150L194 72V138.26"/>
+      <path d="M150 28V62Q150 72 160 72H194"/>
+      <path d="M86 104H166M86 132H166M86 160H130"/>
+    </g>
+    <path fill="#e06c0a" fill-rule="evenodd" d="M189 152A8.47 8.47 0 0 1 202.39 154.66A8.47 8.47 0 0 1 213.75 162.25A8.47 8.47 0 0 1 221.34 173.61A8.47 8.47 0 0 1 224 187A8.47 8.47 0 0 1 221.34 200.39A8.47 8.47 0 0 1 213.75 211.75A8.47 8.47 0 0 1 202.39 219.34A8.47 8.47 0 0 1 189 222A8.47 8.47 0 0 1 175.61 219.34A8.47 8.47 0 0 1 164.25 211.75A8.47 8.47 0 0 1 156.66 200.39A8.47 8.47 0 0 1 154 187A8.47 8.47 0 0 1 156.66 173.61A8.47 8.47 0 0 1 164.25 162.25A8.47 8.47 0 0 1 175.61 154.66A8.47 8.47 0 0 1 189 152ZM218.5 187A29.5 29.5 0 1 1 159.5 187A29.5 29.5 0 1 1 218.5 187ZM213.5 187A24.5 24.5 0 1 1 164.5 187A24.5 24.5 0 1 1 213.5 187Z"/>
+  </g>
+</svg>

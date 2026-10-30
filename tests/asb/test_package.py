@@ -6,4 +6,3 @@ def test_asb_subpackage_importable() -> None:
     from indicium_adapters import asb
 
     assert hasattr(asb, "__version__")
-    assert asb.__version__ == "0.5.0"

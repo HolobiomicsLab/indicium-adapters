@@ -6,6 +6,8 @@ PROV-O envelopes. Pure file-based — does not import asb-domain-core.
 """
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 from indicium_adapters.asb.adapter import ASBAdapter
 from indicium_adapters.asb.loader import load_collection
 from indicium_adapters.asb.models import (
@@ -22,7 +24,11 @@ from indicium_adapters.asb.round_trip import (
     run_round_trip_check,
 )
 
-__version__ = "0.5.0"
+# Read from the installed distribution so it cannot drift from pyproject.
+try:
+    __version__ = version("indicium-adapters")
+except PackageNotFoundError:  # imported from a checkout that is not installed
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     "ASBAdapter",

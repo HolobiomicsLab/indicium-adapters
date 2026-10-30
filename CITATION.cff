@@ -2,12 +2,12 @@ cff-version: 1.2.0
 title: indicium-adapters
 message: "If you use this software, please cite it as below."
 type: software
-version: 0.4.0
-date-released: "2026-05-24"
+version: 0.6.0
 authors:
   - family-names: Nothias
     given-names: Louis-Felix
     email: louis-felix.nothias@cnrs.fr
+    orcid: "https://orcid.org/0000-0001-6711-6719"
 repository-code: "https://github.com/HolobiomicsLab/indicium-adapters"
 license: MIT
 keywords:
