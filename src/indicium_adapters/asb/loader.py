@@ -34,6 +34,7 @@ from indicium_adapters.asb.models import (
     ASBClaimRecord,
     ASBCollection,
     ASBSkillRecord,
+    ASBSkippedSkill,
     ASBToolRecord,
 )
 
@@ -97,10 +98,10 @@ def _normalise_skill_frontmatter(fm: dict[str, Any], dir_name: str) -> dict[str,
 
 
 def _validate_or_warn(model: type[BaseModel], data: Any, source: object) -> Any:
-    """Validate one record; warn and return ``None`` when it does not fit.
+    """Validate one tool record; warn and return ``None`` when it does not fit.
 
-    One malformed skill or tool must not hide the rest of the collection
-    from the round-trip check, so it is reported and skipped, not raised.
+    One malformed tool must not hide the rest of the collection from the
+    mapper, so it is reported and skipped, not raised.
     """
     try:
         return model.model_validate(data)
@@ -109,37 +110,91 @@ def _validate_or_warn(model: type[BaseModel], data: Any, source: object) -> Any:
         return None
 
 
+def _entry_slug(entry: str | dict[str, Any]) -> str:
+    """Return the slug an index entry names.
+
+    A string entry is a slug. A mapping names it with ``slug`` (or
+    ``name``); a mapping with only ``path`` takes its directory name.
+    """
+    if isinstance(entry, str):
+        return entry
+    slug = entry.get("slug") or entry.get("name")
+    if slug:
+        return str(slug)
+    if "path" in entry:
+        return Path(entry["path"]).parent.name
+    raise ValueError(f"skill entry missing both 'path' and 'slug': {entry!r}")
+
+
 def _skill_md_path(root: Path, entry: str | dict[str, Any]) -> Path | None:
     """Return the SKILL.md an index entry points at, or ``None`` if absent.
 
-    A string entry is a slug. A mapping names its file with ``path`` or
-    its slug with ``slug`` (or ``name``). A slug resolves to the first
-    existing ``<dir>/<slug>/SKILL.md`` over ``_SKILL_DIRS``.
+    A mapping with ``path`` names its file. Otherwise the entry's slug
+    resolves to the first existing ``<dir>/<slug>/SKILL.md`` over
+    ``_SKILL_DIRS``.
     """
     if isinstance(entry, dict) and "path" in entry:
         return root / entry["path"]
-    slug = entry if isinstance(entry, str) else entry.get("slug") or entry.get("name")
-    if not slug:
-        raise ValueError(f"skill entry missing both 'path' and 'slug': {entry!r}")
-    candidates = (root / d / slug / "SKILL.md" for d in _SKILL_DIRS)
+    candidates = (root / d / _entry_slug(entry) / "SKILL.md" for d in _SKILL_DIRS)
     return next((md for md in candidates if md.is_file()), None)
 
 
-def _load_skills(root: Path, index: dict[str, Any]) -> list[ASBSkillRecord]:
-    """Load every listed skill whose SKILL.md exists.
+def _listed_iris(value: Any) -> list[str]:
+    """Return the claim IRIs a raw frontmatter value lists, as strings."""
+    if not value:
+        return []
+    return [str(iri) for iri in (value if isinstance(value, list) else [value])]
 
-    An entry without a file (a partial promote) is skipped silently.
+
+def _describe(exc: ValidationError) -> str:
+    """Render validation errors as ``<field path>: <message>``, joined by ``; ``."""
+    return "; ".join(
+        f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in exc.errors()
+    )
+
+
+def _read_skill(root: Path, entry: str | dict[str, Any]) -> ASBSkillRecord | ASBSkippedSkill:
+    """Read one listed skill, or record why it could not be read.
+
+    A skill whose frontmatter fails validation keeps the claim IRIs that
+    frontmatter lists, so the round-trip gate still checks them.
     """
-    skills = []
+    md = _skill_md_path(root, entry)
+    if md is None or not md.is_file():
+        return ASBSkippedSkill(slug=_entry_slug(entry), reason="SKILL.md not found")
+    fm = _normalise_skill_frontmatter(_extract_frontmatter(md), md.parent.name)
+    try:
+        return ASBSkillRecord.model_validate(fm)
+    except ValidationError as exc:
+        return ASBSkippedSkill(
+            slug=str(fm["slug"] or md.parent.name),
+            reason=_describe(exc),
+            claim_ids=_listed_iris(fm["claim_ids"]),
+        )
+
+
+def _load_skills(
+    root: Path, index: dict[str, Any]
+) -> tuple[list[ASBSkillRecord], list[ASBSkippedSkill]]:
+    """Read every listed skill; return those read and those skipped.
+
+    A listed skill with no SKILL.md (a partial promote) or with
+    frontmatter that fails validation is skipped with a warning and kept
+    with its reason, so the round-trip gate can fail on it rather than
+    pass a smaller collection.
+    """
+    skills: list[ASBSkillRecord] = []
+    skipped: list[ASBSkippedSkill] = []
     for entry in index.get("skills") or []:
-        md = _skill_md_path(root, entry)
-        if md is None or not md.is_file():
-            continue
-        fm = _normalise_skill_frontmatter(_extract_frontmatter(md), md.parent.name)
-        record = _validate_or_warn(ASBSkillRecord, fm, md)
-        if record is not None:
+        record = _read_skill(root, entry)
+        if isinstance(record, ASBSkippedSkill):
+            warnings.warn(
+                f"loader: skipping skill {record.slug}: {record.reason}", stacklevel=3
+            )
+            skipped.append(record)
+        else:
             skills.append(record)
-    return skills
+    return skills, skipped
 
 
 def _tool_yaml_path(root: Path, entry: str | dict[str, Any]) -> Path | None:
@@ -193,8 +248,9 @@ def load_collection(root: Path | str) -> ASBCollection:
 
     Raises ``FileNotFoundError`` if ``root`` does not exist or
     ``collection.yaml`` is missing, and ``pydantic.ValidationError`` if a
-    claim record is invalid. A skill or tool record that fails
-    validation is skipped with a warning.
+    claim record is invalid. A tool record that fails validation is
+    skipped with a warning. A listed skill that cannot be read is skipped
+    with a warning and kept in ``skipped_skills``.
     """
     root_path = Path(root)
     if not root_path.is_dir():
@@ -203,12 +259,14 @@ def load_collection(root: Path | str) -> ASBCollection:
     if not index_path.is_file():
         raise FileNotFoundError(f"missing collection.yaml in {root_path}")
     index = _read_yaml(index_path) or {}
+    skills, skipped_skills = _load_skills(root_path, index)
     return ASBCollection(
         collection_iri=_collection_iri(index),
         version=str(index.get("version", "1")),
-        skills=_load_skills(root_path, index),
+        skills=skills,
         tools=_load_tools(root_path, index),
         claims=_load_claims(root_path, index),
+        skipped_skills=skipped_skills,
     )
 
 

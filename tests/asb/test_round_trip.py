@@ -8,6 +8,7 @@ import rdflib
 
 from indicium_adapters.asb.round_trip import (
     RoundTripResult,
+    UnresolvedClaim,
     run_round_trip_check,
 )
 
@@ -53,7 +54,10 @@ def test_round_trip_reads_slug_list_collection() -> None:
     result = run_round_trip_check(SLUG_LIST, _load(GRAPH_OK))
     assert result.ok is True
     assert result.resolved_count == 1
+    assert result.skills_listed == 2
     assert result.skills_checked == 2
+    assert result.skills_skipped == []
+    assert result.skills_with_unlisted_claims == 0
 
 
 def test_round_trip_reports_dangling_claim_in_slug_list_collection() -> None:
@@ -73,3 +77,49 @@ def test_round_trip_ignores_claims_typed_outside_indicium() -> None:
     )
     result = run_round_trip_check(FIXTURE, graph)
     assert [u.skill_slug for u in result.unresolved] == ["feature-detection-lcms"]
+
+
+SKIPPED = Path(__file__).parent / "fixtures" / "skipped_skill_collection"
+UNLISTED = Path(__file__).parent / "fixtures" / "unlisted_claims_collection"
+
+
+def test_round_trip_fails_on_a_listed_skill_it_could_not_read() -> None:
+    """A skill dropped by the loader must block the release, not shrink it."""
+    with pytest.warns(UserWarning):
+        result = run_round_trip_check(SKIPPED, _load(GRAPH_OK))
+    assert result.ok is False
+    assert result.skills_listed == 2
+    assert result.skills_checked == 0
+    assert [s.slug for s in result.skills_skipped] == [
+        "skill-with-claim-and-empty-span",
+        "listed-but-not-promoted",
+    ]
+
+
+def test_round_trip_checks_the_claims_of_a_skipped_skill() -> None:
+    """A skill that fails validation still has its claim IRIs checked."""
+    with pytest.warns(UserWarning):
+        result = run_round_trip_check(SKIPPED, _load(GRAPH_OK))
+    assert result.resolved_count == 1
+    assert result.unresolved == [
+        UnresolvedClaim(
+            skill_slug="skill-with-claim-and-empty-span",
+            claim_iri="https://w3id.org/holobiomicslab/asb-skill/"
+            "skill-with-claim-and-empty-span/claim/02",
+        )
+    ]
+
+
+def test_round_trip_raises_on_a_skipped_skill_when_fail_on_missing() -> None:
+    with pytest.warns(UserWarning), pytest.raises(
+        AssertionError, match="listed-but-not-promoted: SKILL.md not found"
+    ):
+        run_round_trip_check(SKIPPED, _load(GRAPH_OK), fail_on_missing=True)
+
+
+def test_round_trip_counts_skills_that_declare_claims_they_do_not_list() -> None:
+    """n_claims above 0 with no claim IRI is a pass that checked nothing."""
+    result = run_round_trip_check(UNLISTED, _load(GRAPH_OK))
+    assert result.ok is True
+    assert result.resolved_count == 0
+    assert result.skills_with_unlisted_claims == 1

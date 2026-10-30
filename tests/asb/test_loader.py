@@ -95,3 +95,44 @@ def test_frontmatter_ends_at_the_fence_line_only(tmp_path: Path) -> None:
     md = tmp_path / "SKILL.md"
     md.write_text("---\nname: x\nnote: 'a --- b'\n---\nbody\n---\n", encoding="utf-8")
     assert _extract_frontmatter(md) == {"name": "x", "note": "a --- b"}
+
+
+SKIPPED = Path(__file__).parent / "fixtures" / "skipped_skill_collection"
+UNLISTED = Path(__file__).parent / "fixtures" / "unlisted_claims_collection"
+
+
+def test_load_collection_records_each_skipped_skill_with_its_reason() -> None:
+    """A listed skill the loader cannot read is kept with the reason, not dropped."""
+    with pytest.warns(UserWarning) as warned:
+        coll = load_collection(SKIPPED)
+    assert [str(w.message) for w in warned] == [
+        (
+            "loader: skipping skill skill-with-claim-and-empty-span: "
+            "evidence_spans.0.quote: String should have at least 1 character"
+        ),
+        "loader: skipping skill listed-but-not-promoted: SKILL.md not found",
+    ]
+    assert coll.skills == []
+    assert [(s.slug, s.reason) for s in coll.skipped_skills] == [
+        (
+            "skill-with-claim-and-empty-span",
+            "evidence_spans.0.quote: String should have at least 1 character",
+        ),
+        ("listed-but-not-promoted", "SKILL.md not found"),
+    ]
+
+
+def test_skipped_skill_keeps_the_claim_iris_its_frontmatter_lists() -> None:
+    with pytest.warns(UserWarning):
+        invalid, missing = load_collection(SKIPPED).skipped_skills
+    assert invalid.claim_ids == [
+        "https://w3id.org/holobiomicslab/asb-skill/skill-with-claim/claim/01",
+        "https://w3id.org/holobiomicslab/asb-skill/skill-with-claim-and-empty-span/claim/02",
+    ]
+    assert missing.claim_ids == []
+
+
+def test_load_collection_reads_the_declared_claim_count() -> None:
+    (skill,) = load_collection(UNLISTED).skills
+    assert skill.n_claims == 3
+    assert skill.claim_ids == []

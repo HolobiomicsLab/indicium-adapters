@@ -9,12 +9,11 @@
 iri: https://w3id.org/holobiomicslab/asb-skill/collection/example/v2
 slug: example
 version: 2
-skills_count: 3
+skills_count: 2
 tools_count: 2
 skills:
 - skill-with-claim
 - skill-with-provenance-papers
-- listed-but-not-promoted
 tools:
 - plain-tool
 - pathway-tool

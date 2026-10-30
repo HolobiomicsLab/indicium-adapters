@@ -121,6 +121,24 @@ class ASBSkillRecord(BaseModel):
         default_factory=list, validation_alias=_SOURCE_PAPERS_KEYS
     )
     claim_ids: list[str] = Field(default_factory=list)
+    # Claim count a release declares; it may exceed the IRIs it lists.
+    n_claims: int | None = None
+
+
+class ASBSkippedSkill(BaseModel):
+    """A listed skill the loader could not read, and why.
+
+    ``reason`` is ``SKILL.md not found``, or the validation errors of a
+    frontmatter that does not fit ``ASBSkillRecord``. ``claim_ids`` holds
+    the claim IRIs that frontmatter lists, so the round-trip gate still
+    checks them.
+    """
+
+    model_config = _MODEL_CONFIG
+
+    slug: str
+    reason: str
+    claim_ids: list[str] = Field(default_factory=list)
 
 
 class ASBCollection(BaseModel):
@@ -133,6 +151,8 @@ class ASBCollection(BaseModel):
     skills: list[ASBSkillRecord] = Field(default_factory=list)
     tools: list[ASBToolRecord] = Field(default_factory=list)
     claims: list[ASBClaimRecord] = Field(default_factory=list)
+    # Listed skills left out of ``skills``; empty for a complete read.
+    skipped_skills: list[ASBSkippedSkill] = Field(default_factory=list)
 
 
 __all__ = [
@@ -140,6 +160,7 @@ __all__ = [
     "ASBCollection",
     "ASBEvidenceSpan",
     "ASBSkillRecord",
+    "ASBSkippedSkill",
     "ASBSourcePaper",
     "ASBToolRecord",
 ]

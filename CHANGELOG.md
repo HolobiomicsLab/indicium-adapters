@@ -29,6 +29,15 @@ tag is `v0.4.0`, and no version has been published to a package index.
 - `RoundTripResult.skills_checked`, also printed by `verify-claims` and returned
   under `skills_checked` in its JSON: the number of skills read from disk, so a pass
   that read no skill is visible.
+- `RoundTripResult.skills_listed` and `skills_skipped`, also in the `verify-claims`
+  JSON and pretty output: the entries under `skills` in `collection.yaml`, and the
+  slug and reason of each listed skill that has no SKILL.md or fails validation.
+  The loader keeps such skills in `ASBCollection.skipped_skills` (new model
+  `ASBSkippedSkill`) instead of dropping them.
+- `RoundTripResult.skills_with_unlisted_claims`: skills whose frontmatter declares
+  `n_claims` above 0 but lists no claim IRI. `verify-claims` returns it in its JSON
+  and prints a warning on stderr; it does not fail the gate. `ASBSkillRecord` reads
+  `n_claims`.
 - `tests/test_release_metadata.py`: `CITATION.cff` and `pyproject.toml` carry the
   same version, `indicium_adapters.asb.__version__` is the installed distribution
   version, and this file has one Unreleased section.
@@ -98,6 +107,15 @@ tag is `v0.4.0`, and no version has been published to a package index.
   indicium's `asb:Claim`, the class ASB's indicium emitter writes.
 - The pretty `verify-claims` FAIL report printed each dangling reference as a
   dataclass repr; it now prints `<skill slug>: <claim IRI>`.
+- **The round-trip gate failed open.** A listed skill with no SKILL.md was dropped
+  without a word, and one that failed validation was dropped with a warning, so
+  `verify-claims` exited 0 without checking the claim IRIs it listed. Both now fail
+  the gate (exit 1, `RoundTripResult.ok` false), and the claim IRIs a skipped
+  skill's frontmatter lists are still checked. `RoundTripResult.render()` now
+  returns the report `verify-claims` prints.
+- The `verify-claims --help` text named only `metadata.claims` and the
+  `skills/<slug>/SKILL.md` layout; it now names the frontmatter `claims` key and
+  `leaves/<slug>/SKILL.md`.
 
 ### Known gaps
 - Only claims use terms the indicium schema declares. Evidence, software, source

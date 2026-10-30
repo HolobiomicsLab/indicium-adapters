@@ -1,0 +1,9 @@
+# A release index listing two skills the loader cannot read: one whose
+# frontmatter fails validation but still lists claim IRIs, and one whose
+# SKILL.md was never written (a partial promote).
+iri: https://w3id.org/holobiomicslab/asb-skill/collection/skipped/v1
+slug: skipped
+version: 1
+skills:
+- skill-with-claim-and-empty-span
+- listed-but-not-promoted

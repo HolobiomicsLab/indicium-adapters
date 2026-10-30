@@ -132,8 +132,8 @@ verify-claims --collection <collection dir> --indicium-graph <graph.ttl> [--form
 
 | Exit code | Meaning |
 |---|---|
-| 0 | every claim IRI resolves |
-| 1 | at least one claim IRI dangles |
+| 0 | every claim IRI resolves and every listed skill was read |
+| 1 | a claim IRI dangles, or a listed skill has no SKILL.md or fails validation |
 | 2 | invocation error: a missing path or a bad argument |
 
 On the bundled fixture in the current collection layout:
@@ -141,7 +141,7 @@ On the bundled fixture in the current collection layout:
 ```console
 $ verify-claims --collection tests/asb/fixtures/slug_list_collection \
                 --indicium-graph tests/asb/fixtures/indicium_graph.ttl
-OK - 1 claim(s) resolved in 2 skill(s).
+OK - 1 claim(s) resolved in 2 skill(s); 2 listed, 0 skipped.
 
 $ verify-claims --collection tests/asb/fixtures/slug_list_collection \
                 --indicium-graph tests/asb/fixtures/indicium_graph_broken.ttl
@@ -149,7 +149,28 @@ FAIL - 1 dangling claim URI(s):
   - skill-with-claim: https://w3id.org/holobiomicslab/asb-skill/skill-with-claim/claim/01
 ```
 
-The loader reads two layouts. In the current one, `collection.yaml` lists skill and tool slugs, leaf skills sit in `leaves/<slug>/SKILL.md` and tools in `tools/<slug>.yaml`. In the earlier one, the index lists mappings with a `path` or a `slug`. The JSON output carries `unresolved`, `resolved_count` and `skills_checked`, the number of skills read; a pass with `skills_checked` at 0 read nothing.
+A listed skill the loader cannot read fails the gate. The claim IRIs of a skill that fails validation are still checked:
+
+```console
+$ verify-claims --collection tests/asb/fixtures/skipped_skill_collection \
+                --indicium-graph tests/asb/fixtures/indicium_graph.ttl
+FAIL - 1 dangling claim URI(s):
+  - skill-with-claim-and-empty-span: https://w3id.org/holobiomicslab/asb-skill/skill-with-claim-and-empty-span/claim/02
+FAIL - 2 of 2 listed skill(s) skipped:
+  - skill-with-claim-and-empty-span: evidence_spans.0.quote: String should have at least 1 character
+  - listed-but-not-promoted: SKILL.md not found
+```
+
+A skill whose frontmatter declares `n_claims` above 0 but lists no claim IRI has nothing to check. It does not fail the gate; `verify-claims` prints their count on stderr:
+
+```console
+$ verify-claims --collection tests/asb/fixtures/unlisted_claims_collection \
+                --indicium-graph tests/asb/fixtures/indicium_graph.ttl
+WARNING - 1 skill(s) declare n_claims above 0 but list no claim IRI; their claims are not checked.
+OK - 0 claim(s) resolved in 1 skill(s); 1 listed, 0 skipped.
+```
+
+The loader reads two layouts. In the current one, `collection.yaml` lists skill and tool slugs, leaf skills sit in `leaves/<slug>/SKILL.md` and tools in `tools/<slug>.yaml`. In the earlier one, the index lists mappings with a `path` or a `slug`. The JSON output carries `unresolved`, `resolved_count`, `skills_listed` (entries under `skills` in `collection.yaml`), `skills_checked` (skills read), `skills_skipped` (slug and reason per skill not read) and `skills_with_unlisted_claims`; a pass with `skills_checked` at 0 read nothing.
 
 Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from a copied string. A claim is typed `asb:Claim` with `asb:subject`, `asb:relation` and `asb:object`; a qualifier rides `asb:qualifier` when it is a closed Bucur term and `asb:domainQualifier` otherwise. Skill and tool IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/` and `.../asb-tool/` form that ASB mints.
 
