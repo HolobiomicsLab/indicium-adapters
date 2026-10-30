@@ -11,13 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # This step and the git install of indicium below go away once
+      # indicium-standard is published on PyPI: pip then resolves it from
+      # the index like any other dependency, and ORG_PAT is no longer needed.
       - name: Configure git auth for private cross-repo installs
         env:
           GH_TOKEN: ${{ secrets.ORG_PAT }}
@@ -33,10 +36,10 @@ jobs:
           # indicium isn't on PyPI yet; install from git
           pip install git+https://github.com/HolobiomicsLab/indicium.git@main
           # .[asb] brings httpx + pydantic + pyyaml for the src/indicium_adapters/asb
-          # submodule that tests/asb exercises; .[dev] brings pytest/pytest-cov/pyshacl.
-          pip install -e .[dev,asb] || pip install -e .
-          pip install pytest pytest-cov ruff
+          # submodule that tests/asb exercises; .[dev] brings pytest, pytest-cov,
+          # pyshacl and the pinned ruff.
+          pip install -e ".[dev,asb]"
       - name: Lint
-        run: ruff check . || true
+        run: ruff check .
       - name: Run tests
         run: pytest --cov=indicium_adapters --cov-report=term-missing

@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-import pytest
 
 from indicium_adapters.asb.biotools import BioToolsResolver
 

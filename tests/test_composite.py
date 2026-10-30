@@ -1,13 +1,14 @@
 """Tests for CompositeAdapter and compose_adapters()."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 import rdflib
 from rdflib import RDF
 
 from indicium_adapters import CURRENT_API_VERSION, DomainAdapter, SHACLProvider
 from indicium_adapters.composite import CompositeAdapter, compose_adapters
-
 
 # ---------------------------------------------------------------------------
 # Minimal mock adapters (no external deps)
@@ -17,7 +18,7 @@ class _AdapterA:
     domain_id = "domain_a"
     api_version = 1
     qualifiers = frozenset({"qualifier_a1", "qualifier_a2"})
-    ontology_prefixes = {
+    ontology_prefixes: ClassVar[dict[str, str]] = {
         "PREFIX_A": "http://example.org/a/",
         "SHARED": "http://example.org/shared_a/",   # conflicts with B
     }
@@ -41,7 +42,7 @@ class _AdapterB:
     domain_id = "domain_b"
     api_version = 1
     qualifiers = frozenset({"qualifier_b1"})
-    ontology_prefixes = {
+    ontology_prefixes: ClassVar[dict[str, str]] = {
         "PREFIX_B": "http://example.org/b/",
         "SHARED": "http://example.org/shared_b/",   # conflicts with A; B wins
     }
@@ -66,7 +67,7 @@ class _AdapterNoSHACL:
     domain_id = "domain_c"
     api_version = 1
     qualifiers = frozenset({"qualifier_c1"})
-    ontology_prefixes = {"PREFIX_C": "http://example.org/c/"}
+    ontology_prefixes: ClassVar[dict[str, str]] = {"PREFIX_C": "http://example.org/c/"}
 
     def extraction_context(self) -> str:
         return "Domain C context."

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
+from typing import Self
 
 import rdflib
 from rdflib.namespace import RDF
@@ -123,7 +124,7 @@ class ASBAdapter:
     def close(self) -> None:
         self._resolver.close()
 
-    def __enter__(self) -> "ASBAdapter":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:

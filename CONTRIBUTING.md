@@ -15,7 +15,7 @@ pip install pytest pytest-cov ruff
 
 1. Create a feature branch from `main`.
 2. Write tests first (TDD). The suite is `pytest`.
-3. Run `ruff check . || true` and `pytest` before pushing.
+3. Run `ruff check .` and `pytest` before pushing. CI fails on any ruff finding.
 4. Open a PR.
 
 ## Scope

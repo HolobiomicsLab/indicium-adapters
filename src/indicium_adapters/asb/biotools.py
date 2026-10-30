@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Self
 
 import httpx
 
@@ -50,7 +50,7 @@ class BioToolsResolver:
             offline = os.environ.get("ASB_ADAPTER_OFFLINE", "") == "1"
         self._offline = offline
 
-    def resolve(self, canonical_url: Optional[str]) -> Optional[str]:
+    def resolve(self, canonical_url: str | None) -> str | None:
         """Return a bio.tools id, ``None`` for misses or missing URL."""
         if not canonical_url:
             return None
@@ -71,7 +71,7 @@ class BioToolsResolver:
         self._conn.commit()
         return resolved
 
-    def _fetch(self, canonical_url: str) -> Optional[str]:
+    def _fetch(self, canonical_url: str) -> str | None:
         try:
             response = self._client.get(
                 _BIOTOOLS_SEARCH,
@@ -91,7 +91,7 @@ class BioToolsResolver:
             self._client.close()
         self._conn.close()
 
-    def __enter__(self) -> "BioToolsResolver":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
