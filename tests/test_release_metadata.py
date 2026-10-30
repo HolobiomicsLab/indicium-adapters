@@ -30,3 +30,11 @@ def test_asb_version_is_the_distribution_version() -> None:
 def test_changelog_has_one_unreleased_section() -> None:
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert len(re.findall(r"^## \[Unreleased\]", changelog, re.MULTILINE)) == 1
+
+
+def test_security_policy_supports_the_declared_minor_line() -> None:
+    """SECURITY.md must list the pyproject major.minor line as supported."""
+    minor_line = ".".join(_pyproject_version().split(".")[:2])
+    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    supported = re.findall(r"^\|\s*(\S+)\s*\|\s*yes\s*\|$", security, re.MULTILINE)
+    assert supported == [f"{minor_line}.x"]

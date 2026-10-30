@@ -45,12 +45,15 @@ tag is `v0.4.0`, and no version has been published to a package index.
   `n_claims`.
 - `tests/test_release_metadata.py`: `CITATION.cff` and `pyproject.toml` carry the
   same version, `indicium_adapters.asb.__version__` is the installed distribution
-  version, and this file has one Unreleased section.
+  version, this file has one Unreleased section, and `SECURITY.md` supports the
+  `pyproject.toml` major.minor line.
 
 ### Changed
 - **The dependency is the renamed `indicium-standard>=2.0.0`** (was `indicium>=1.7`),
   and the version moved to 0.6.0 in the same commit. The import name stays
-  `indicium`.
+  `indicium`. The ASB mapper requires indicium main at or after 62c7f52, the first
+  commit exporting `ASB_BASE` and `INDICIUM_BASE`; earlier 2.0.0 builds satisfy the
+  floor but make `import indicium_adapters.asb` raise `ImportError`.
 - **`requires-python` lowered from `>=3.12` to `>=3.11`.** Nothing in the package
   needed 3.12: all 24 source and test modules parse under 3.11 (no PEP 695
   type-parameter syntax, no `type` alias statements), there is no 3.12-only stdlib
@@ -89,7 +92,8 @@ tag is `v0.4.0`, and no version has been published to a package index.
 - `indicium_adapters.asb.__version__` reads the installed distribution version (it
   was a hardcoded `0.5.0`). `CITATION.cff` moves from 0.4.0 to 0.6.0, gains the
   author's ORCID and drops the `date-released` of 0.4.0, since 0.6.0 has no release.
-- `SECURITY.md` writes its supported-versions table in plain text.
+- `SECURITY.md` writes its supported-versions table in plain text and lists 0.6.x
+  as the supported line (it still listed 0.4.x).
 - CI tests Python 3.11, 3.12 and 3.13. `ruff check .` now fails the job on any
   finding; ruff is pinned to 0.17.3 in the `dev` extra because each release widens
   its default rule set. The extras install no longer falls back to a bare install.
@@ -123,15 +127,21 @@ tag is `v0.4.0`, and no version has been published to a package index.
   `leaves/<slug>/SKILL.md`.
 
 ### Known gaps
-- Only claims use terms the indicium schema declares. Evidence, software, source
-  and skill nodes and their properties use this mapper's local names under
-  `INDICIUM_BASE` (for example `exactQuote`, where indicium declares
-  `quote_exact`).
+- Claims use the declared `asb:subject`, `asb:relation`, `asb:object`,
+  `asb:context`, `asb:qualifier` and `asb:domainQualifier`. A claim's
+  `super_pattern` and every evidence, software, source and skill term use this
+  mapper's local names under `INDICIUM_BASE` (for example `superPattern`, and
+  `exactQuote` where indicium declares `quote_exact`).
 - A claims-file record without `context` maps to a claim without `asb:context`,
   which the `asb:Claim` shape requires, and the shape reports a violation. ASB's
   own claims carry a context; the mapper writes it when the record has one.
 - Current tool records carry `repo_url`, not `canonical_url`, so the bio.tools
   resolver has nothing to look up for them.
+- No SKILL.md in the current collections lists a claim IRI, so `verify-claims`
+  checks none. Metabolomics v2 has 5859 skills and none lists a claim IRI.
+  Proteomics v1 and genomics v1 declare `n_claims` totalling 5454 across 558 skills
+  and 34070 across 3246 skills, but list no IRI. Each passes with 0 claims
+  resolved.
 - `uv lock` and `uv sync` need the indicium checkout beside this one:
   `[tool.uv.sources]` points `indicium-standard` at `../indicium`.
 

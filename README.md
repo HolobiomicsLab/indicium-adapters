@@ -182,10 +182,10 @@ Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from 
 
 Known limitations of `indicium_adapters.asb`:
 
-- Only claims use terms the indicium schema declares. Evidence, software, source and skill nodes use this mapper's own local names under `INDICIUM_BASE`, for example `exactQuote` where indicium declares `quote_exact`.
+- Claims use the declared `asb:subject`, `asb:relation`, `asb:object`, `asb:context`, `asb:qualifier` and `asb:domainQualifier`. A claim's `super_pattern` and every evidence, software, source and skill term use this mapper's own local names under `INDICIUM_BASE` (for example `superPattern`, and `exactQuote` where indicium declares `quote_exact`).
 - A claims-file record without `context` maps to a claim without `asb:context`, which the `asb:Claim` shape requires; validation reports that violation. ASB's own claims carry a context, and the mapper writes it when the record has one.
 - Current tool records carry `repo_url`, not `canonical_url`, so the bio.tools resolver has nothing to look up for them.
-- No SKILL.md in the metabolomics v2 collection of [asb-skill-collections](https://github.com/HolobiomicsLab/asb-skill-collections) lists a claim IRI yet: `verify-claims` reads its 5859 skills and passes with 0 claims resolved.
+- No SKILL.md in the current collections lists a claim IRI, so `verify-claims` checks none. The metabolomics v2 collection of [asb-skill-collections](https://github.com/HolobiomicsLab/asb-skill-collections) has 5859 skills and none lists a claim IRI. The proteomics v1 and genomics v1 collections declare `n_claims` totalling 5454 across 558 skills and 34070 across 3246 skills, but list no IRI. Each passes with 0 claims resolved; on the last two, `verify-claims` warns that the declared claims are not checked.
 
 ## Writing a domain package
 
@@ -211,7 +211,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-On this version: 106 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 91% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
+On this version: 119 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 91% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. Neither 0.5.0 nor 0.6.0 was tagged; the last tag is `v0.4.0`.
 
@@ -219,7 +219,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](C
 
 - Indicium standard (`indicium-standard`, import `indicium`): the claim and evidence model, its SHACL shapes and the `asb:` vocabulary base `https://w3id.org/asb#`. Repository follows.
 - The ten domain packages in the table above. Repositories follow.
-- [Perspicacité](https://github.com/HolobiomicsLab/Perspicacite-AI) unions every installed adapter's `qualifiers` and `extraction_context()` into its claim-extraction prompt.
+- [Perspicacité](https://github.com/HolobiomicsLab/Perspicacite-AI) composes the installed adapters named in a request's `domains` and merges their `qualifiers` and `extraction_context()` into its claim-extraction prompt.
 - [ASB skill collections](https://github.com/HolobiomicsLab/asb-skill-collections): the registry whose collections `indicium_adapters.asb` maps to Indicium RDF and `verify-claims` gates.
 
 ## Citation

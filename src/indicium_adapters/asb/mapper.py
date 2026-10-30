@@ -6,10 +6,12 @@ reads. Provenance (PROV envelopes) is attached one layer up in
 
 Vocabulary bases are read from ``indicium``, never restated, so they
 follow the standard when it moves a namespace. A claim is typed with
-indicium's Claim class and its slots use the ``asb:`` terms the
-indicium SHACL shapes declare. The other classes and properties are
-written under indicium's ``INDICIUM_BASE`` with this mapper's own local
-names, which the indicium schema does not declare.
+indicium's Claim class, and its subject, relation, object, context and
+qualifiers use the ``asb:`` terms the indicium SHACL shapes declare. A
+claim's ``super_pattern`` and every other class and property are written
+under indicium's ``INDICIUM_BASE`` with this mapper's own local names
+(``superPattern``, ``exactQuote``), which the indicium schema does not
+declare.
 
 Skill and tool instance IRIs follow the form ASB's release code mints,
 since indicium exports no base for them.
