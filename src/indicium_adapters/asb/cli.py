@@ -45,8 +45,8 @@ def _load_graph(path: Path) -> Graph:
 def _emit_pretty(result) -> None:
     if result.unresolved:
         print(f"FAIL - {len(result.unresolved)} dangling claim URI(s):")
-        for uri in result.unresolved:
-            print(f"  - {uri}")
+        for u in result.unresolved:
+            print(f"  - {u.skill_slug}: {u.claim_iri}")
     else:
         print(
             f"OK - {result.resolved_count} claim(s) resolved "

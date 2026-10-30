@@ -73,3 +73,18 @@ def test_cli_pretty_format_names_skills_checked() -> None:
         capture_output=True, text=True, check=False,
     )
     assert result.stdout.strip() == "OK - 1 claim(s) resolved in 2 skill(s)."
+
+
+def test_cli_pretty_format_lists_dangling_claims_by_slug_and_iri() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "indicium_adapters.asb.cli",
+         "--collection", str(SLUG_LIST),
+         "--indicium-graph", str(GRAPH_BROKEN)],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 1
+    claim = "https://w3id.org/holobiomicslab/asb-skill/skill-with-claim/claim/01"
+    assert result.stdout.splitlines() == [
+        "FAIL - 1 dangling claim URI(s):",
+        f"  - skill-with-claim: {claim}",
+    ]
