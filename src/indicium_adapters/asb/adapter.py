@@ -18,19 +18,23 @@ SPARQL endpoints, the round-trip checker) consume.
 from __future__ import annotations
 
 import uuid
+import warnings
 from pathlib import Path
+from typing import Self
 
 import rdflib
-from rdflib.namespace import RDF
+from rdflib.namespace import DCTERMS, RDF
 
 from indicium_adapters.asb.biotools import BioToolsResolver
 from indicium_adapters.asb.loader import load_collection
 from indicium_adapters.asb.mapper import (
     ASB,
+    ASB_VOCAB,
     ASBTOOL,
     BIOTOOLS,
     CITO,
     ECO,
+    FABIO,
     INDICIUM,
     SEPIO,
     claim_to_triples,
@@ -39,7 +43,46 @@ from indicium_adapters.asb.mapper import (
     skill_to_evidence_triples,
     tool_to_software_entity_triples,
 )
+from indicium_adapters.asb.models import ASBCollection, ASBSourcePaper
 from indicium_adapters.asb.prov import ProvEnvelope, attach_prov
+
+# Bases of every class the mapper types a node with.
+_MAPPED_TYPE_BASES = (str(INDICIUM), str(ASB_VOCAB), str(SEPIO), str(FABIO))
+
+
+# DOIs named in the conflicting-title warning before the rest are counted.
+_DOIS_SHOWN = 10
+
+
+def _papers(coll: ASBCollection) -> list[ASBSourcePaper]:
+    """Return one paper per DOI cited by the collection's records.
+
+    The indicium Source shape allows one ``dct:title``. A paper keeps the
+    title its records give when they give one; when they give different
+    titles, nothing here can tell which is right, so the paper is written
+    without a title and a warning counts such papers and names the first
+    DOIs so that the records can be corrected. The DOI identifies it.
+    """
+    titles: dict[str, set[str]] = {}
+    for record in [*coll.skills, *coll.tools, *coll.claims]:
+        for paper in record.source_papers:
+            titles.setdefault(paper.doi, set()).update({paper.title} - {""})
+    conflicting = sorted(doi for doi, found in titles.items() if len(found) > 1)
+    if conflicting:
+        shown = ", ".join(conflicting[:_DOIS_SHOWN])
+        more = len(conflicting) - _DOIS_SHOWN
+        if more > 0:
+            shown += f" and {more} more"
+        warnings.warn(
+            f"{len(conflicting)} paper(s) carry different titles across records; "
+            f"they are written without dct:title: {shown}.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return [
+        ASBSourcePaper(doi=doi, title=next(iter(found)) if len(found) == 1 else "")
+        for doi, found in titles.items()
+    ]
 
 
 class ASBAdapter:
@@ -69,10 +112,13 @@ class ASBAdapter:
 
         g = rdflib.Graph()
         g.bind("indicium", INDICIUM)
+        g.bind("asb", ASB_VOCAB)
         g.bind("eco", ECO)
         g.bind("cito", CITO)
         g.bind("sepio", SEPIO)
-        g.bind("asb", ASB)
+        g.bind("fabio", FABIO)
+        g.bind("dct", DCTERMS)
+        g.bind("asbskill", ASB)
         g.bind("asbtool", ASBTOOL)
         g.bind("biotools", BIOTOOLS)
 
@@ -84,35 +130,27 @@ class ASBAdapter:
                 g.add(t)
             for t in skill_claim_sepio_assertion_triples(skill):
                 g.add(t)
-            for paper in skill.source_papers:
-                for t in paper_to_information_source_triples(paper):
-                    g.add(t)
 
         # Tools
         for tool in coll.tools:
             for t in tool_to_software_entity_triples(tool):
                 g.add(t)
-            for paper in tool.source_papers:
-                for t in paper_to_information_source_triples(paper):
-                    g.add(t)
 
         # Claims
         for claim in coll.claims:
             for t in claim_to_triples(claim):
                 g.add(t)
-            for paper in claim.source_papers:
-                for t in paper_to_information_source_triples(paper):
-                    g.add(t)
 
-        # Wrap every typed indicium node + every SEPIO assertion in PROV.
+        # Papers cited by skills, tools and claims, one node per DOI
+        for paper in _papers(coll):
+            for t in paper_to_information_source_triples(paper):
+                g.add(t)
+
+        # Wrap every node typed by this mapper in PROV.
         typed_subjects = {
             s
             for s, _, o in g.triples((None, RDF.type, None))
-            if isinstance(o, rdflib.URIRef)
-            and (
-                str(o).startswith(str(INDICIUM))
-                or str(o).startswith(str(SEPIO))
-            )
+            if str(o).startswith(_MAPPED_TYPE_BASES)
         }
         for s in typed_subjects:
             attach_prov(g, s, envelope)
@@ -122,7 +160,7 @@ class ASBAdapter:
     def close(self) -> None:
         self._resolver.close()
 
-    def __enter__(self) -> "ASBAdapter":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:

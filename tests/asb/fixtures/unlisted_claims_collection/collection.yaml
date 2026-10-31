@@ -1,0 +1,7 @@
+# A release index whose one skill declares a claim count but lists no claim
+# IRI, the shape of the current domain collections.
+iri: https://w3id.org/holobiomicslab/asb-skill/collection/unlisted/v1
+slug: unlisted
+version: 1
+skills:
+- skill-declaring-claims

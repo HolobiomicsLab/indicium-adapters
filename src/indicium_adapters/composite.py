@@ -11,6 +11,7 @@ from indicium_adapters import CURRENT_API_VERSION, SHACLProvider
 
 if TYPE_CHECKING:
     import rdflib
+
     from indicium_adapters import DomainAdapter
 
 

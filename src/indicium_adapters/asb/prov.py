@@ -10,7 +10,7 @@ The envelope answers three questions for an audit reader:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import rdflib
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,12 +27,12 @@ class ProvEnvelope(BaseModel):
     at_time: datetime
 
     @classmethod
-    def new(cls, adapter_run_iri: str, collection_iri: str) -> "ProvEnvelope":
+    def new(cls, adapter_run_iri: str, collection_iri: str) -> ProvEnvelope:
         """Build an envelope stamped with ``datetime.now(UTC)``."""
         return cls(
             adapter_run_iri=adapter_run_iri,
             collection_iri=collection_iri,
-            at_time=datetime.now(timezone.utc),
+            at_time=datetime.now(UTC),
         )
 
 

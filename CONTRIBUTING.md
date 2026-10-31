@@ -4,18 +4,20 @@ Thanks for your interest!
 
 ## Setup
 
+Clone `indicium` and `indicium-adapters` side by side. `indicium-standard`
+is not on PyPI yet, and `[tool.uv.sources]` points it at `../indicium`.
+
 ```bash
-git clone https://github.com/HolobiomicsLab/indicium-adapters
 cd indicium-adapters
-pip install -e .
-pip install pytest pytest-cov ruff
+uv sync --extra dev --extra asb
 ```
 
 ## Development workflow
 
 1. Create a feature branch from `main`.
 2. Write tests first (TDD). The suite is `pytest`.
-3. Run `ruff check . || true` and `pytest` before pushing.
+3. Run `uv run ruff check .` and `uv run pytest` before pushing. CI fails
+   on any ruff finding.
 4. Open a PR.
 
 ## Scope
@@ -28,5 +30,5 @@ logic here.
 ## Bumping CURRENT_API_VERSION
 
 Bumping `CURRENT_API_VERSION` is a coordinated cross-repo release. Plan
-with the maintainers of all known `indicium-adapters-*` consumers
-(currently: indicium-adapters-metabolomics).
+it with the maintainers of every `indicium-adapters-*` package; the README
+lists the ten known at 0.6.0.

@@ -1,4 +1,4 @@
-@prefix indicium: <https://w3id.org/holobiomicslab/indicium#> .
+@prefix asb: <https://w3id.org/asb#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
 # Intentionally empty: no claim IRIs declared. The round-trip checker

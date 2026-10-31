@@ -1,0 +1,19 @@
+# Layout written by the current ASB release (SKILL.md schema_version 0.2.0):
+# skills and tools are listed by slug, leaf skills live in leaves/<slug>/,
+# and skills/ holds only the router skills, which the index does not list.
+'@context':
+  '@vocab': https://schema.org/
+  asb: https://w3id.org/holobiomicslab/asb-skill/
+'@type': asb:SkillCollection
+'@id': https://w3id.org/holobiomicslab/asb-skill/collection/example/v2
+iri: https://w3id.org/holobiomicslab/asb-skill/collection/example/v2
+slug: example
+version: 2
+skills_count: 2
+tools_count: 2
+skills:
+- skill-with-claim
+- skill-with-provenance-papers
+tools:
+- plain-tool
+- pathway-tool

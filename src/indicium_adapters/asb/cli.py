@@ -1,9 +1,11 @@
 """Console entry point for the ASB → indicium round-trip verifier.
 
 Designed to be called by ``asb-skill-collections`` CI as a release-blocking
-gate. Exits 0 when every ``metadata.claims`` URI in every SKILL.md resolves
-in the supplied indicium graph; exits 1 (with diagnostics on stdout) when
-any URI dangles.
+gate. Exits 0 when every claim IRI a SKILL.md lists (frontmatter
+``claims``, or ``metadata.claims``) resolves in the supplied indicium graph,
+every listed skill was read and the graph types at least one node with a
+class an indicium SHACL shape targets; exits 1 (with diagnostics on
+stdout) otherwise.
 
 ## CI integration contract
 
@@ -15,9 +17,31 @@ any URI dangles.
                   --format json
 
 Exit codes:
-- 0: all claim URIs resolve; release may proceed.
-- 1: one or more URIs dangle; release blocked. JSON stdout lists them.
+- 0: all claim URIs resolve, every listed skill was read and the graph has
+  a node an indicium shape targets; release may proceed.
+- 1: one or more URIs dangle, a listed skill has no SKILL.md or fails
+  validation, or no node of the graph is typed with a class an indicium
+  SHACL shape targets, so validating it would check nothing; release
+  blocked. JSON stdout lists them.
 - 2: invocation error (missing file, bad args).
+
+JSON stdout carries ``unresolved`` (``skill_slug`` and ``claim_iri`` per
+dangling reference), ``resolved_count``, ``skills_listed`` (entries under
+``skills`` in collection.yaml), ``skills_checked`` (skills read from disk),
+``skills_skipped`` (``skill_slug`` and ``reason`` per skill not read),
+``skills_with_unlisted_claims`` and ``shape_targeted_nodes`` (graph nodes
+typed with a class an indicium SHACL shape targets). A pass with
+``skills_checked`` at 0 checked nothing.
+
+The shape-targeted count is taken over the whole graph: one node of a
+targeted class is enough to pass it, whether or not the node comes from
+the collection, and instances of subclasses of a targeted class are not
+counted. It shows that validation has something to check, not that the
+collection's own records were mapped to targeted classes.
+
+A skill whose frontmatter declares ``n_claims`` above 0 but lists no claim
+IRI has nothing to check. Such skills do not fail the gate; their count is
+printed as a warning on stderr.
 """
 from __future__ import annotations
 
@@ -28,7 +52,7 @@ from pathlib import Path
 
 from rdflib import Graph
 
-from indicium_adapters.asb.round_trip import run_round_trip_check
+from indicium_adapters.asb.round_trip import RoundTripResult, run_round_trip_check
 
 
 def _load_graph(path: Path) -> Graph:
@@ -37,16 +61,7 @@ def _load_graph(path: Path) -> Graph:
     return g
 
 
-def _emit_pretty(result) -> None:
-    if result.unresolved:
-        print(f"FAIL — {len(result.unresolved)} dangling claim URI(s):")
-        for uri in result.unresolved:
-            print(f"  - {uri}")
-    else:
-        print(f"OK — {result.resolved_count} claim(s) resolved.")
-
-
-def _emit_json(result) -> None:
+def _emit_json(result: RoundTripResult) -> None:
     json.dump(
         {
             "unresolved": [
@@ -54,24 +69,45 @@ def _emit_json(result) -> None:
                 for u in result.unresolved
             ],
             "resolved_count": result.resolved_count,
+            "skills_listed": result.skills_listed,
+            "skills_checked": result.skills_checked,
+            "skills_skipped": [
+                {"skill_slug": s.slug, "reason": s.reason}
+                for s in result.skills_skipped
+            ],
+            "skills_with_unlisted_claims": result.skills_with_unlisted_claims,
+            "shape_targeted_nodes": result.shape_targeted_nodes,
         },
         sys.stdout,
     )
+
+
+def _warn_unlisted_claims(result: RoundTripResult) -> None:
+    """Say on stderr how many skills count claims the gate cannot check."""
+    if result.skills_with_unlisted_claims:
+        print(
+            f"WARNING - {result.skills_with_unlisted_claims} skill(s) declare "
+            "n_claims above 0 but list no claim IRI; their claims are not checked.",
+            file=sys.stderr,
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="verify-claims",
         description=(
-            "Verify that every metadata.claims URI in every SKILL.md of "
-            "an ASB-Skill collection resolves in an indicium graph. "
+            "Verify that every claim IRI listed in a SKILL.md (frontmatter "
+            "`claims`, or `metadata.claims`) of an ASB skill collection is "
+            "typed asb:Claim in an indicium graph, and that the graph types "
+            "a node with a class an indicium SHACL shape targets. "
             "Release-blocking CI gate for asb-skill-collections."
         ),
     )
     parser.add_argument(
         "--collection", required=True, type=Path,
-        help="Path to the ASB-Skill collection directory (must contain "
-             "collection.yaml + skills/<slug>/SKILL.md files).",
+        help="Path to the collection directory (collection.yaml plus "
+             "leaves/<slug>/SKILL.md, or skills/<slug>/SKILL.md in the "
+             "earlier layout).",
     )
     parser.add_argument(
         "--indicium-graph", required=True, type=Path,
@@ -96,9 +132,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         _emit_json(result)
     else:
-        _emit_pretty(result)
+        print(result.render())
+    _warn_unlisted_claims(result)
 
-    return 1 if result.unresolved else 0
+    return 0 if result.ok else 1
 
 
 if __name__ == "__main__":

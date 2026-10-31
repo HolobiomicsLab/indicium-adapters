@@ -5,6 +5,7 @@ but isolated so they can be skipped when entry-points aren't registered.
 """
 import importlib.util
 import warnings
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,7 +31,7 @@ class _MinimalAdapter:
     """Smallest valid DomainAdapter — just the required attributes."""
     domain_id = "test_domain"
     qualifiers = frozenset({"test_q"})
-    ontology_prefixes = {"TST": "http://test.example.org/"}
+    ontology_prefixes: ClassVar[dict[str, str]] = {"TST": "http://test.example.org/"}
     api_version = 1  # required by updated Protocol
 
     def extraction_context(self) -> str:
@@ -44,7 +45,7 @@ class _MissingMethods:
     """Adapter that has data attributes but no methods."""
     domain_id = "bad"
     qualifiers = frozenset()
-    ontology_prefixes = {}
+    ontology_prefixes: ClassVar[dict[str, str]] = {}
 
 
 class _MissingData:
@@ -172,7 +173,7 @@ def test_discover_adapters_skips_wrong_api_version():
         domain_id = "bad"
         api_version = 999
         qualifiers = frozenset()
-        ontology_prefixes = {}
+        ontology_prefixes: ClassVar[dict[str, str]] = {}
         def extraction_context(self): return ""
         def enrich_claim(self, c): return c
 
@@ -180,10 +181,12 @@ def test_discover_adapters_skips_wrong_api_version():
     mock_ep.name = "bad_adapter"
     mock_ep.load.return_value = _WrongVersionAdapter
 
-    with patch("importlib.metadata.entry_points", return_value=[mock_ep]):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            result = discover_adapters()
+    with (
+        patch("importlib.metadata.entry_points", return_value=[mock_ep]),
+        warnings.catch_warnings(record=True) as w,
+    ):
+        warnings.simplefilter("always")
+        result = discover_adapters()
 
     assert "bad" not in result
     assert any("api_version" in str(warning.message) for warning in w), (
@@ -202,7 +205,7 @@ def test_discover_adapters_loads_correct_api_version():
         domain_id = "good"
         api_version = CURRENT_API_VERSION
         qualifiers = frozenset()
-        ontology_prefixes = {}
+        ontology_prefixes: ClassVar[dict[str, str]] = {}
         def extraction_context(self): return ""
         def enrich_claim(self, c): return c
 
@@ -244,13 +247,14 @@ def test_minimal_adapter_does_not_satisfy_shacl_provider():
 def test_shacl_provider_requires_shacl_shapes_method():
     """A class with all DomainAdapter attrs + shacl_shapes() satisfies SHACLProvider."""
     import rdflib
+
     from indicium_adapters import SHACLProvider
 
     class _FullSHACLAdapter:
         domain_id = "test"
         api_version = 1
         qualifiers = frozenset()
-        ontology_prefixes = {}
+        ontology_prefixes: ClassVar[dict[str, str]] = {}
         def extraction_context(self): return ""
         def enrich_claim(self, c): return c
         def shacl_shapes(self) -> rdflib.Graph:

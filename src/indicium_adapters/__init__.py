@@ -220,7 +220,7 @@ def discover_adapters() -> dict[str, DomainAdapter]:
                 )
                 continue
             result[adapter.domain_id] = adapter
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - a broken plugin must not stop discovery
             warnings.warn(
                 f"Failed to load adapter '{ep.name}': {exc}",
                 UserWarning,

@@ -1,8 +1,15 @@
-@prefix indicium: <https://w3id.org/holobiomicslab/indicium#> .
+# Claims typed with indicium's Claim class, as ASB's indicium emitter writes them.
+@prefix asb: <https://w3id.org/asb#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 
 <https://w3id.org/holobiomicslab/asb-skill/feature-detection-lcms/claim/01>
-    rdf:type indicium:Claim ;
-    indicium:subject "MZmine ADAP-3D" ;
-    indicium:predicate "detects" ;
-    indicium:object "chromatographic features in LC-MS data" .
+    rdf:type asb:Claim ;
+    asb:subject "MZmine ADAP-3D" ;
+    asb:relation "detects" ;
+    asb:object "chromatographic features in LC-MS data" .
+
+<https://w3id.org/holobiomicslab/asb-skill/skill-with-claim/claim/01>
+    rdf:type asb:Claim ;
+    asb:subject "an example method" ;
+    asb:relation "aligns" ;
+    asb:object "the converted runs" .

@@ -1,11 +1,20 @@
 """Read a collection directory from disk into Pydantic v2 models.
 
-The on-disk layout is::
+Two on-disk layouts are read. Current ASB releases (SKILL.md
+``schema_version`` 0.2.0) write::
 
     <root>/
-        collection.yaml            ← index
-        tools/<slug>.yaml          ← tool ledger entries (one per slug)
+        collection.yaml            ← index; ``skills`` and ``tools`` list slugs
+        leaves/<slug>/SKILL.md     ← one leaf skill per listed slug
+        skills/<name>/SKILL.md     ← router skills, not listed in the index
+        tools/<slug>.yaml          ← one tool record per listed slug
+
+The earlier layout, kept by the bundled fixture, lists mappings instead::
+
+    <root>/
+        collection.yaml            ← index; entries carry ``path`` or ``slug``
         skills/<slug>/SKILL.md     ← markdown with YAML frontmatter
+        tools/<slug>.yaml          ← or a sibling tools.lock.yaml
         claims.yaml                ← list of claim records (optional)
 
 The loader is the only filesystem reader in the package. Mapper and
@@ -13,19 +22,27 @@ adapter code consume ``ASBCollection`` and never touch disk.
 """
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import BaseModel, ValidationError
 
+from indicium_adapters.asb.mapper import ASB_SKILL_BASE
 from indicium_adapters.asb.models import (
     ASBClaimRecord,
     ASBCollection,
     ASBSkillRecord,
+    ASBSkippedSkill,
     ASBToolRecord,
 )
 
 _FRONTMATTER_FENCE = "---"
+# Where a listed slug's SKILL.md may live: current layout first.
+_SKILL_DIRS = ("leaves", "skills")
+# Index keys that may carry the collection IRI, most specific first.
+_COLLECTION_IRI_KEYS = ("collection_iri", "iri", "@id")
 
 
 def _read_yaml(path: Path) -> Any:
@@ -34,136 +51,222 @@ def _read_yaml(path: Path) -> Any:
 
 
 def _extract_frontmatter(md_path: Path) -> dict[str, Any]:
-    text = md_path.read_text(encoding="utf-8")
-    if not text.startswith(_FRONTMATTER_FENCE):
+    """Parse the YAML block between the first two ``---`` fence lines.
+
+    Only a line that is exactly the fence closes the block, so a value
+    that contains ``---`` (a quoted evidence span, say) stays intact.
+    The frontmatter key ``claims`` is returned as ``claim_ids``, the
+    model's name for the list of claim IRIs.
+    """
+    lines = md_path.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].rstrip() != _FRONTMATTER_FENCE:
         raise ValueError(f"{md_path}: missing YAML frontmatter fence")
-    parts = text.split(_FRONTMATTER_FENCE, 2)
-    if len(parts) < 3:
+    closing = [i for i, line in enumerate(lines[1:], 1) if line.rstrip() == _FRONTMATTER_FENCE]
+    if not closing:
         raise ValueError(f"{md_path}: malformed frontmatter")
-    raw = yaml.safe_load(parts[1]) or {}
+    raw = yaml.safe_load("\n".join(lines[1 : closing[0]])) or {}
     if not isinstance(raw, dict):
-        raise ValueError(f"{md_path}: frontmatter must be a mapping")
-    # "claims" in the frontmatter is a list of IRI strings; the model
-    # field is named ``claim_ids`` to avoid shadowing the ClaimRecord
-    # type.
+        raise TypeError(f"{md_path}: frontmatter must be a mapping")
     if "claims" in raw and "claim_ids" not in raw:
-        raw["claim_ids"] = raw.pop("claims")
+        raw["claim_ids"] = raw.pop("claims") or []
     return raw
+
+
+def _nested(frontmatter: dict[str, Any], key: str) -> dict[str, Any]:
+    value = frontmatter.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _normalise_skill_frontmatter(fm: dict[str, Any], dir_name: str) -> dict[str, Any]:
+    """Fill the model fields that a SKILL.md keeps elsewhere or omits.
+
+    ``slug`` falls back to ``name``, then to the skill's directory name.
+    EDAM terms and claim IRIs fall back to their copies under
+    ``metadata``; source papers fall back to ``provenance.source_papers``
+    when neither ``source_papers`` nor ``derived_from`` is present.
+    Returns ``fm``, updated in place.
+    """
+    fm.setdefault("slug", fm.get("name") or dir_name)
+    fm.setdefault("name", fm["slug"])
+    metadata = _nested(fm, "metadata")
+    fm.setdefault("edam_topics", metadata.get("edam_topics") or [])
+    fm.setdefault("edam_operation", metadata.get("edam_operation") or "")
+    fm.setdefault("claim_ids", metadata.get("claims") or [])
+    if "source_papers" not in fm and "derived_from" not in fm:
+        fm["source_papers"] = _nested(fm, "provenance").get("source_papers") or []
+    return fm
+
+
+def _validate_or_warn(model: type[BaseModel], data: Any, source: object) -> Any:
+    """Validate one tool record; warn and return ``None`` when it does not fit.
+
+    One malformed tool must not hide the rest of the collection from the
+    mapper, so it is reported and skipped, not raised.
+    """
+    try:
+        return model.model_validate(data)
+    except ValidationError as exc:
+        warnings.warn(f"loader: skipping {source}: {exc}", stacklevel=3)
+        return None
+
+
+def _entry_slug(entry: str | dict[str, Any]) -> str:
+    """Return the slug an index entry names.
+
+    A string entry is a slug. A mapping names it with ``slug`` (or
+    ``name``); a mapping with only ``path`` takes its directory name.
+    """
+    if isinstance(entry, str):
+        return entry
+    slug = entry.get("slug") or entry.get("name")
+    if slug:
+        return str(slug)
+    if "path" in entry:
+        return Path(entry["path"]).parent.name
+    raise ValueError(f"skill entry missing both 'path' and 'slug': {entry!r}")
+
+
+def _skill_md_path(root: Path, entry: str | dict[str, Any]) -> Path | None:
+    """Return the SKILL.md an index entry points at, or ``None`` if absent.
+
+    A mapping with ``path`` names its file. Otherwise the entry's slug
+    resolves to the first existing ``<dir>/<slug>/SKILL.md`` over
+    ``_SKILL_DIRS``.
+    """
+    if isinstance(entry, dict) and "path" in entry:
+        return root / entry["path"]
+    candidates = (root / d / _entry_slug(entry) / "SKILL.md" for d in _SKILL_DIRS)
+    return next((md for md in candidates if md.is_file()), None)
+
+
+def _listed_iris(value: Any) -> list[str]:
+    """Return the claim IRIs a raw frontmatter value lists, as strings."""
+    if not value:
+        return []
+    return [str(iri) for iri in (value if isinstance(value, list) else [value])]
+
+
+def _describe(exc: ValidationError) -> str:
+    """Render validation errors as ``<field path>: <message>``, joined by ``; ``."""
+    return "; ".join(
+        f"{'.'.join(map(str, err['loc']))}: {err['msg']}" for err in exc.errors()
+    )
+
+
+def _read_skill(root: Path, entry: str | dict[str, Any]) -> ASBSkillRecord | ASBSkippedSkill:
+    """Read one listed skill, or record why it could not be read.
+
+    A skill whose frontmatter fails validation keeps the claim IRIs that
+    frontmatter lists, so the round-trip gate still checks them.
+    """
+    md = _skill_md_path(root, entry)
+    if md is None or not md.is_file():
+        return ASBSkippedSkill(slug=_entry_slug(entry), reason="SKILL.md not found")
+    fm = _normalise_skill_frontmatter(_extract_frontmatter(md), md.parent.name)
+    try:
+        return ASBSkillRecord.model_validate(fm)
+    except ValidationError as exc:
+        return ASBSkippedSkill(
+            slug=str(fm["slug"] or md.parent.name),
+            reason=_describe(exc),
+            claim_ids=_listed_iris(fm["claim_ids"]),
+        )
+
+
+def _load_skills(
+    root: Path, index: dict[str, Any]
+) -> tuple[list[ASBSkillRecord], list[ASBSkippedSkill]]:
+    """Read every listed skill; return those read and those skipped.
+
+    A listed skill with no SKILL.md (a partial promote) or with
+    frontmatter that fails validation is skipped with a warning and kept
+    with its reason, so the round-trip gate can fail on it rather than
+    pass a smaller collection.
+    """
+    skills: list[ASBSkillRecord] = []
+    skipped: list[ASBSkippedSkill] = []
+    for entry in index.get("skills") or []:
+        record = _read_skill(root, entry)
+        if isinstance(record, ASBSkippedSkill):
+            warnings.warn(
+                f"loader: skipping skill {record.slug}: {record.reason}", stacklevel=3
+            )
+            skipped.append(record)
+        else:
+            skills.append(record)
+    return skills, skipped
+
+
+def _tool_yaml_path(root: Path, entry: str | dict[str, Any]) -> Path | None:
+    """Return where a tool index entry's record lives, or ``None``.
+
+    A string entry is a slug, read from ``tools/<slug>.yaml``. A mapping
+    names its file with ``path``; one without ``path`` is described by
+    ``tools.lock.yaml`` instead.
+    """
+    if isinstance(entry, str):
+        return root / "tools" / f"{entry}.yaml"
+    return root / entry["path"] if "path" in entry else None
+
+
+def _load_tools(root: Path, index: dict[str, Any]) -> list[ASBToolRecord]:
+    """Load the listed tool records, then those of ``tools.lock.yaml``."""
+    sources: list[tuple[object, Any]] = []
+    for entry in index.get("tools") or []:
+        path = _tool_yaml_path(root, entry)
+        if path is not None and path.is_file():
+            sources.append((path, _read_yaml(path)))
+    lock_path = root / "tools.lock.yaml"
+    if lock_path.is_file():
+        lock = _read_yaml(lock_path) or {}
+        sources.extend((lock_path, entry) for entry in lock.get("tools", []))
+    tools = (_validate_or_warn(ASBToolRecord, data, src) for src, data in sources)
+    return [tool for tool in tools if tool is not None]
+
+
+def _load_claims(root: Path, index: dict[str, Any]) -> list[ASBClaimRecord]:
+    """Load the claim records of an optional ``claims`` file; raise if invalid."""
+    claims_entry = index.get("claims")
+    if not claims_entry:
+        return []
+    claims_path = claims_entry["path"] if isinstance(claims_entry, dict) else claims_entry
+    raw = _read_yaml(root / claims_path) or []
+    return [ASBClaimRecord.model_validate(c) for c in raw]
+
+
+def _collection_iri(index: dict[str, Any]) -> str:
+    """Return the IRI the index declares, else the one ASB would mint."""
+    declared = next((index[k] for k in _COLLECTION_IRI_KEYS if index.get(k)), None)
+    if declared:
+        return str(declared)
+    slug = index.get("slug", "unknown")
+    return f"{ASB_SKILL_BASE}collection/{slug}/v{index.get('version', 1)}"
 
 
 def load_collection(root: Path | str) -> ASBCollection:
     """Read a collection directory and return a validated ``ASBCollection``.
 
     Raises ``FileNotFoundError`` if ``root`` does not exist or
-    ``collection.yaml`` is missing. Raises ``ValueError`` (wrapping
-    ``pydantic.ValidationError``) if any parsed record fails validation.
+    ``collection.yaml`` is missing, and ``pydantic.ValidationError`` if a
+    claim record is invalid. A tool record that fails validation is
+    skipped with a warning. A listed skill that cannot be read is skipped
+    with a warning and kept in ``skipped_skills``.
     """
     root_path = Path(root)
     if not root_path.is_dir():
         raise FileNotFoundError(f"collection root not found: {root_path}")
-
     index_path = root_path / "collection.yaml"
     if not index_path.is_file():
         raise FileNotFoundError(f"missing collection.yaml in {root_path}")
     index = _read_yaml(index_path) or {}
-
-    # The ASB ``asb collection promote`` emitter (Plan 2a/2b) writes
-    # collection.yaml with ``skills: [{slug, iri}]`` and a sibling
-    # ``tools.lock.yaml`` rather than inline ``skills: [{path}]`` entries.
-    # Accept both shapes: explicit-path (used by tests/fixtures) and the
-    # slug-implied path convention ``skills/<slug>/SKILL.md`` produced by
-    # the real CLI.
-
-    def _skill_md_path(entry: dict) -> Path:
-        if "path" in entry:
-            return root_path / entry["path"]
-        slug = entry.get("slug") or entry.get("name")
-        if not slug:
-            raise ValueError(
-                f"skill entry missing both 'path' and 'slug': {entry!r}"
-            )
-        return root_path / "skills" / slug / "SKILL.md"
-
-    skills: list[ASBSkillRecord] = []
-    for entry in index.get("skills", []):
-        md = _skill_md_path(entry)
-        if not md.exists():
-            # Some entries may reference legacy slug/iri without a file
-            # present yet (e.g. during partial promotes); skip silently.
-            continue
-        fm = _extract_frontmatter(md)
-        # SKILL.md frontmatter uses Anthropic-style ``name:`` only; the
-        # Pydantic model requires both ``slug`` and ``name``. Derive
-        # ``slug`` from the directory name (which mirrors the value of
-        # ``name`` produced by ``asb collection promote``) when it's
-        # missing from the frontmatter itself.
-        if "slug" not in fm:
-            fm["slug"] = fm.get("name") or md.parent.name
-        if "name" not in fm:
-            fm["name"] = fm.get("slug") or md.parent.name
-        # The promote emitter stores nested EDAM metadata under
-        # ``metadata.edam_topics`` / ``metadata.edam_operation``. The
-        # legacy fixtures put them flat. Try both.
-        if "edam_topics" not in fm and isinstance(fm.get("metadata"), dict):
-            fm["edam_topics"] = fm["metadata"].get("edam_topics", []) or []
-        if "edam_operation" not in fm and isinstance(fm.get("metadata"), dict):
-            fm["edam_operation"] = fm["metadata"].get("edam_operation", "") or ""
-        # Tools/source_papers/claim_ids may also live under metadata.
-        if "claim_ids" not in fm and isinstance(fm.get("metadata"), dict):
-            fm["claim_ids"] = fm["metadata"].get("claims", []) or []
-        try:
-            skills.append(ASBSkillRecord.model_validate(fm))
-        except Exception as exc:
-            # Skip malformed entries with a structured log; don't fail
-            # the entire round-trip check on one bad skill.
-            import warnings
-            warnings.warn(
-                f"loader: skipping {md} — {type(exc).__name__}: {exc}"
-            )
-
-    tools: list[ASBToolRecord] = []
-    # Inline `tools: [{path}]` (legacy schema)
-    for entry in index.get("tools", []):
-        if "path" not in entry:
-            continue
-        data = _read_yaml(root_path / entry["path"])
-        tools.append(ASBToolRecord.model_validate(data))
-    # Sibling tools.lock.yaml (current asb collection promote)
-    lock_path = root_path / "tools.lock.yaml"
-    if lock_path.is_file():
-        lock = _read_yaml(lock_path) or {}
-        for entry in lock.get("tools", []):
-            try:
-                tools.append(ASBToolRecord.model_validate(entry))
-            except Exception:
-                # Skip silently — schemas may diverge until LinkML normalizes
-                continue
-
-    claims: list[ASBClaimRecord] = []
-    claims_entry = index.get("claims")
-    if claims_entry:
-        claims_path_value = (
-            claims_entry["path"] if isinstance(claims_entry, dict) else claims_entry
-        )
-        raw = _read_yaml(root_path / claims_path_value) or []
-        for c in raw:
-            claims.append(ASBClaimRecord.model_validate(c))
-
-    # collection_iri synthesis: prefer explicit, otherwise derive from slug+version.
-    collection_iri = index.get("collection_iri")
-    if not collection_iri:
-        slug = index.get("slug", "unknown")
-        version = index.get("version", 1)
-        collection_iri = (
-            f"https://w3id.org/holobiomicslab/asb-skill/collection/{slug}/v{version}"
-        )
-
+    skills, skipped_skills = _load_skills(root_path, index)
     return ASBCollection(
-        collection_iri=collection_iri,
+        collection_iri=_collection_iri(index),
         version=str(index.get("version", "1")),
         skills=skills,
-        tools=tools,
-        claims=claims,
+        tools=_load_tools(root_path, index),
+        claims=_load_claims(root_path, index),
+        skipped_skills=skipped_skills,
     )
 
 
