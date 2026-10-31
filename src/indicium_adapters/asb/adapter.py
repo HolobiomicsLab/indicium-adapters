@@ -50,23 +50,32 @@ from indicium_adapters.asb.prov import ProvEnvelope, attach_prov
 _MAPPED_TYPE_BASES = (str(INDICIUM), str(ASB_VOCAB), str(SEPIO), str(FABIO))
 
 
+# DOIs named in the conflicting-title warning before the rest are counted.
+_DOIS_SHOWN = 10
+
+
 def _papers(coll: ASBCollection) -> list[ASBSourcePaper]:
     """Return one paper per DOI cited by the collection's records.
 
     The indicium Source shape allows one ``dct:title``. A paper keeps the
     title its records give when they give one; when they give different
     titles, nothing here can tell which is right, so the paper is written
-    without a title and a warning counts such papers. The DOI identifies it.
+    without a title and a warning counts such papers and names the first
+    DOIs so that the records can be corrected. The DOI identifies it.
     """
     titles: dict[str, set[str]] = {}
     for record in [*coll.skills, *coll.tools, *coll.claims]:
         for paper in record.source_papers:
             titles.setdefault(paper.doi, set()).update({paper.title} - {""})
-    conflicting = sum(1 for found in titles.values() if len(found) > 1)
+    conflicting = sorted(doi for doi, found in titles.items() if len(found) > 1)
     if conflicting:
+        shown = ", ".join(conflicting[:_DOIS_SHOWN])
+        more = len(conflicting) - _DOIS_SHOWN
+        if more > 0:
+            shown += f" and {more} more"
         warnings.warn(
-            f"{conflicting} paper(s) carry different titles across records; "
-            "they are written without dct:title.",
+            f"{len(conflicting)} paper(s) carry different titles across records; "
+            f"they are written without dct:title: {shown}.",
             UserWarning,
             stacklevel=3,
         )

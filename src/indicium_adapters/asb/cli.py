@@ -33,6 +33,12 @@ dangling reference), ``resolved_count``, ``skills_listed`` (entries under
 typed with a class an indicium SHACL shape targets). A pass with
 ``skills_checked`` at 0 checked nothing.
 
+The shape-targeted count is taken over the whole graph: one node of a
+targeted class is enough to pass it, whether or not the node comes from
+the collection, and instances of subclasses of a targeted class are not
+counted. It shows that validation has something to check, not that the
+collection's own records were mapped to targeted classes.
+
 A skill whose frontmatter declares ``n_claims`` above 0 but lists no claim
 IRI has nothing to check. Such skills do not fail the gate; their count is
 printed as a warning on stderr.

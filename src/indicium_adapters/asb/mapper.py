@@ -20,12 +20,22 @@ indicium's ``INDICIUM_BASE`` with this mapper's own local names
 (``Skill``, ``name``, ``hasEvidence``, ``superPattern``), which the
 indicium schema does not declare.
 
+Known departures from the indicium model, which no shape checks:
+``indicium:source_doi`` and ``indicium:paragraph_id`` are written on
+Evidence although indicium declares them on other classes (paragraph_id
+on Source, source_doi on Figure, Script and DataAsset), and the
+Evidence shape is
+open; ``indicium:of_source``, indicium's Evidence-to-Source link, is
+not written; and the skill-to-claim assertion nodes use ``SEPIO_Assertion``,
+``SEPIO_hasSubject`` and ``SEPIO_hasObject``, which are not SEPIO terms.
+
 Skill and tool instance IRIs follow the form ASB's release code mints,
 since indicium exports no base for them.
 """
 from __future__ import annotations
 
 import uuid
+from urllib.parse import urlsplit
 
 import rdflib
 from indicium import ASB_BASE, INDICIUM_BASE, SuperPatternQualifier
@@ -120,6 +130,19 @@ def skill_to_evidence_triples(skill) -> list[Triple]:
     return triples
 
 
+def _url_term(url: str) -> rdflib.term.Identifier:
+    """Return ``url`` as an IRI when it is an absolute one, else as a literal.
+
+    A relative or whitespace-bearing value would pass the shape's
+    ``sh:nodeKind sh:IRI`` as a URIRef yet break the Turtle serialisation;
+    as a literal the shape reports it.
+    """
+    parts = urlsplit(url)
+    if parts.scheme and parts.netloc and not any(c.isspace() for c in url):
+        return rdflib.URIRef(url)
+    return rdflib.Literal(url)
+
+
 def tool_to_software_entity_triples(tool) -> list[Triple]:
     """Emit one indicium SoftwareEntity (``fabio:ComputerProgram``) per tool.
 
@@ -133,9 +156,7 @@ def tool_to_software_entity_triples(tool) -> list[Triple]:
     triples.append((iri, DCTERMS.identifier, rdflib.Literal(str(iri))))
     triples.append((iri, INDICIUM.name, rdflib.Literal(tool.name)))
     if tool.canonical_url:
-        triples.append(
-            (iri, INDICIUM.canonical_url, rdflib.URIRef(tool.canonical_url))
-        )
+        triples.append((iri, INDICIUM.canonical_url, _url_term(tool.canonical_url)))
     if tool.bio_tools_id:
         triples.append(
             (iri, INDICIUM.bio_tools_id, rdflib.Literal(tool.bio_tools_id))

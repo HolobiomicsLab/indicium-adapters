@@ -124,6 +124,21 @@ def test_tool_emits_software_entity_with_edam_and_biotools() -> None:
     )
 
 
+def test_tool_canonical_url_that_is_not_an_absolute_iri_stays_a_literal() -> None:
+    """A relative or space-bearing URL would break Turtle as an IRI."""
+    for url in ("https://github.com/foo bar", "github.com/foo/bar"):
+        tool = ASBToolRecord(slug="t", name="T", canonical_url=url)
+        triples = tool_to_software_entity_triples(tool)
+        assert _has(triples, ASBTOOL["t"], INDICIUM.canonical_url, rdflib.Literal(url))
+        graph = rdflib.Graph()
+        for triple in triples:
+            graph.add(triple)
+        rdflib.Graph().parse(data=graph.serialize(format="turtle"), format="turtle")
+        conforms, report = indicium.validate_graph(graph)
+        assert not conforms
+        assert "Result Path: indicium:canonical_url\n" in report
+
+
 def test_tool_without_biotools_id_emits_no_biotools_triple() -> None:
     """The indicium shape wants a string; no rdf:nil sentinel is written."""
     tool = ASBToolRecord(slug="x", name="X", bio_tools_id=None)

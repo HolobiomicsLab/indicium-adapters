@@ -93,7 +93,8 @@ tag is `v0.4.0`, and no version has been published to a package index.
   Evidence, `sepio:0000002` (was `indicium:Evidence`), with `indicium:eco_code`,
   `indicium:quote_exact`, `indicium:source_doi` and `indicium:paragraph_id`. A tool
   is a SoftwareEntity, `fabio:ComputerProgram` (was `indicium:SoftwareEntity`), with
-  its IRI in `dct:identifier`, `indicium:canonical_url` as an IRI and
+  its IRI in `dct:identifier`, `indicium:canonical_url` as an IRI (a value that is
+  not an absolute IRI stays a literal, which the shape reports) and
   `indicium:edam_operation` and `indicium:edam_topics`. A paper is a Source,
   `fabio:Expression` (was `indicium:InformationSource`), with its DOI in
   `dct:identifier` (was `cito:hasIdentifier`) and its title in `dct:title`. The v2
@@ -107,7 +108,8 @@ tag is `v0.4.0`, and no version has been published to a package index.
   an unresolved id is no longer written as `rdf:nil`, which the shape rejects.
 - `ASBAdapter` writes one paper node per DOI. When the records citing a paper give
   it different titles it gets no `dct:title`, which the indicium shape allows once,
-  and the adapter warns with their count: 50 of the 498 papers of metabolomics v2.
+  and the adapter warns with their count and the first ten DOIs: 50 of the 498
+  papers of metabolomics v2.
 - Skill and tool instance IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/`
   and `.../asb-tool/` form that ASB's release code mints, now exported as
   `ASB_SKILL_BASE` and `ASB_TOOL_BASE`. `ASBAdapter` binds the `asb:` prefix to the
@@ -160,10 +162,21 @@ tag is `v0.4.0`, and no version has been published to a package index.
   `leaves/<slug>/SKILL.md`.
 
 ### Known gaps
-- Claims, evidence spans, tools and papers use the classes and slots the indicium
-  shapes declare. Skills, which the indicium model does not describe, a claim's
+- Claims, evidence spans, tools and papers are typed with the classes the indicium
+  shapes target. Skills, which the indicium model does not describe, a claim's
   `super_pattern`, the `name` of skills and tools and the skill-to-evidence link
   `hasEvidence` use this mapper's local names under `INDICIUM_BASE`.
+- Evidence spans carry `indicium:source_doi` and `indicium:paragraph_id`, which
+  indicium declares on other classes (`paragraph_id` on Source, `source_doi` on
+  Figure, Script and DataAsset). The Evidence shape is open, so no shape checks
+  them. `indicium:of_source`, the Evidence-to-Source link indicium models, is not
+  written.
+- The skill-to-claim assertion nodes use `SEPIO_Assertion`, `SEPIO_hasSubject` and
+  `SEPIO_hasObject`, which are not SEPIO terms; no shape targets them.
+- A paper whose records give different titles is written without `dct:title`, with
+  a warning naming its DOI.
+- The `verify-claims` shape-targeted count is graph-wide: one targeted node passes
+  it, and instances of subclasses of a targeted class are not counted.
 - A claims-file record without `context` maps to a claim without `asb:context`,
   which the `asb:Claim` shape requires, and the shape reports a violation. ASB's
   own claims carry a context; the mapper writes it when the record has one.

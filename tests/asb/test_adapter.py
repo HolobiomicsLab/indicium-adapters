@@ -136,7 +136,7 @@ def test_adapter_writes_no_title_when_the_records_of_a_paper_disagree(
     coll = _two_skill_collection(tmp_path / "c", ("A study", "tool-name"))
     with (
         ASBAdapter(cache_db=tmp_path / "bt.sqlite", offline=True) as adapter,
-        pytest.warns(UserWarning, match="1 paper"),
+        pytest.warns(UserWarning, match=r"1 paper.*: 10\.1/abc\."),
     ):
         graph = adapter.to_rdf_graph(coll)
     paper = rdflib.URIRef("https://doi.org/10.1/abc")

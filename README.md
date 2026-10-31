@@ -185,7 +185,10 @@ Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from 
 
 Known limitations of `indicium_adapters.asb`:
 
-- Claims, evidence spans, tools and papers use the classes and slots the Indicium shapes declare. Skills, which the Indicium model does not describe, a claim's `super_pattern`, the `name` of skills and tools and the skill-to-evidence link `hasEvidence` use this mapper's own local names under `INDICIUM_BASE`.
+- Claims, evidence spans, tools and papers are typed with the classes the Indicium shapes target. Skills, which the Indicium model does not describe, a claim's `super_pattern`, the `name` of skills and tools and the skill-to-evidence link `hasEvidence` use this mapper's own local names under `INDICIUM_BASE`.
+- Evidence spans carry `indicium:source_doi` and `indicium:paragraph_id`, which Indicium declares on other classes (`paragraph_id` on Source, `source_doi` on Figure, Script and DataAsset). The Evidence shape is open, so no shape checks them. `indicium:of_source`, the Evidence-to-Source link Indicium models, is not written.
+- The skill-to-claim assertion nodes use `SEPIO_Assertion`, `SEPIO_hasSubject` and `SEPIO_hasObject`, which are not SEPIO terms; no shape targets them.
+- A paper whose records give different titles is written without `dct:title`, with a warning naming its DOI.
 - A claims-file record without `context` maps to a claim without `asb:context`, which the `asb:Claim` shape requires; validation reports that violation. ASB's own claims carry a context, and the mapper writes it when the record has one.
 - Current tool records carry `repo_url`, not `canonical_url`, so the bio.tools resolver has nothing to look up for them.
 - No SKILL.md in the current collections lists a claim IRI, so `verify-claims` checks none. The metabolomics v2 collection of [asb-skill-collections](https://github.com/HolobiomicsLab/asb-skill-collections) has 5859 skills and none lists a claim IRI. The proteomics v1 and genomics v1 collections declare `n_claims` totalling 5454 across 558 skills and 34070 across 3246 skills, but list no IRI. Each passes with 0 claims resolved; on the last two, `verify-claims` warns that the declared claims are not checked.
@@ -214,7 +217,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-On this version: 133 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
+On this version, locally on Python 3.14: 134 passed, 4 skipped; with `indicium-adapters-metabolomics` installed, on Python 3.11: 138 passed. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs Python 3.11, 3.12 and 3.13 and fails on any ruff finding; ruff is pinned in the `dev` extra.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. Neither 0.5.0 nor 0.6.0 was tagged; the last tag is `v0.4.0`.
 
