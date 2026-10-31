@@ -1,4 +1,5 @@
 - claim_id: "https://w3id.org/holobiomicslab/asb-skill/feature-detection-lcms/claim/01"
+  context: "untargeted LC-MS metabolomics"
   subject: "MZmine ADAP-3D"
   predicate: "detects"
   object: "chromatographic features in LC-MS data"

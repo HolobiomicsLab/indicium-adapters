@@ -69,6 +69,7 @@ def test_cli_reports_skills_checked_on_slug_list_collection() -> None:
         "skills_checked": 2,
         "skills_skipped": [],
         "skills_with_unlisted_claims": 0,
+        "shape_targeted_nodes": 2,
     }
 
 
@@ -96,6 +97,10 @@ def test_cli_pretty_format_lists_dangling_claims_by_slug_and_iri() -> None:
     assert result.stdout.splitlines() == [
         "FAIL - 1 dangling claim URI(s):",
         f"  - skill-with-claim: {claim}",
+        (
+            "FAIL - the indicium graph types no node with a class an indicium "
+            "SHACL shape targets; validating it would check nothing."
+        ),
     ]
 
 
@@ -168,3 +173,19 @@ def test_cli_warns_on_skills_that_declare_claims_they_do_not_list() -> None:
             "their claims are not checked."
         )
     ]
+
+
+def test_cli_exits_nonzero_on_a_graph_no_indicium_shape_targets() -> None:
+    """A pass that checked no claim on a graph SHACL would not check is a failure."""
+    result = subprocess.run(
+        [sys.executable, "-m", "indicium_adapters.asb.cli",
+         "--collection", str(UNLISTED),
+         "--indicium-graph", str(GRAPH_BROKEN),
+         "--format", "json"],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["unresolved"] == []
+    assert payload["skills_skipped"] == []
+    assert payload["shape_targeted_nodes"] == 0

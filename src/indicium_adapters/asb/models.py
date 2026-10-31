@@ -35,7 +35,8 @@ class ASBEvidenceSpan(BaseModel):
     model_config = _MODEL_CONFIG
 
     quote: str = Field(min_length=1)
-    eco_code: str = "eco:textual-quotation"
+    # A value of indicium's EcoCodeAsbSubset; textual_quotation is ECO:0000033.
+    eco_code: str = "textual_quotation"
     source_doi: str | None = None
     paragraph_id: str | None = None
 

@@ -18,11 +18,12 @@ SPARQL endpoints, the round-trip checker) consume.
 from __future__ import annotations
 
 import uuid
+import warnings
 from pathlib import Path
 from typing import Self
 
 import rdflib
-from rdflib.namespace import RDF
+from rdflib.namespace import DCTERMS, RDF
 
 from indicium_adapters.asb.biotools import BioToolsResolver
 from indicium_adapters.asb.loader import load_collection
@@ -33,6 +34,7 @@ from indicium_adapters.asb.mapper import (
     BIOTOOLS,
     CITO,
     ECO,
+    FABIO,
     INDICIUM,
     SEPIO,
     claim_to_triples,
@@ -41,10 +43,37 @@ from indicium_adapters.asb.mapper import (
     skill_to_evidence_triples,
     tool_to_software_entity_triples,
 )
+from indicium_adapters.asb.models import ASBCollection, ASBSourcePaper
 from indicium_adapters.asb.prov import ProvEnvelope, attach_prov
 
 # Bases of every class the mapper types a node with.
-_MAPPED_TYPE_BASES = (str(INDICIUM), str(ASB_VOCAB), str(SEPIO))
+_MAPPED_TYPE_BASES = (str(INDICIUM), str(ASB_VOCAB), str(SEPIO), str(FABIO))
+
+
+def _papers(coll: ASBCollection) -> list[ASBSourcePaper]:
+    """Return one paper per DOI cited by the collection's records.
+
+    The indicium Source shape allows one ``dct:title``. A paper keeps the
+    title its records give when they give one; when they give different
+    titles, nothing here can tell which is right, so the paper is written
+    without a title and a warning counts such papers. The DOI identifies it.
+    """
+    titles: dict[str, set[str]] = {}
+    for record in [*coll.skills, *coll.tools, *coll.claims]:
+        for paper in record.source_papers:
+            titles.setdefault(paper.doi, set()).update({paper.title} - {""})
+    conflicting = sum(1 for found in titles.values() if len(found) > 1)
+    if conflicting:
+        warnings.warn(
+            f"{conflicting} paper(s) carry different titles across records; "
+            "they are written without dct:title.",
+            UserWarning,
+            stacklevel=3,
+        )
+    return [
+        ASBSourcePaper(doi=doi, title=next(iter(found)) if len(found) == 1 else "")
+        for doi, found in titles.items()
+    ]
 
 
 class ASBAdapter:
@@ -78,6 +107,8 @@ class ASBAdapter:
         g.bind("eco", ECO)
         g.bind("cito", CITO)
         g.bind("sepio", SEPIO)
+        g.bind("fabio", FABIO)
+        g.bind("dct", DCTERMS)
         g.bind("asbskill", ASB)
         g.bind("asbtool", ASBTOOL)
         g.bind("biotools", BIOTOOLS)
@@ -90,25 +121,21 @@ class ASBAdapter:
                 g.add(t)
             for t in skill_claim_sepio_assertion_triples(skill):
                 g.add(t)
-            for paper in skill.source_papers:
-                for t in paper_to_information_source_triples(paper):
-                    g.add(t)
 
         # Tools
         for tool in coll.tools:
             for t in tool_to_software_entity_triples(tool):
                 g.add(t)
-            for paper in tool.source_papers:
-                for t in paper_to_information_source_triples(paper):
-                    g.add(t)
 
         # Claims
         for claim in coll.claims:
             for t in claim_to_triples(claim):
                 g.add(t)
-            for paper in claim.source_papers:
-                for t in paper_to_information_source_triples(paper):
-                    g.add(t)
+
+        # Papers cited by skills, tools and claims, one node per DOI
+        for paper in _papers(coll):
+            for t in paper_to_information_source_triples(paper):
+                g.add(t)
 
         # Wrap every node typed by this mapper in PROV.
         typed_subjects = {

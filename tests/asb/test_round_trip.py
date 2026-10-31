@@ -6,9 +6,11 @@ from pathlib import Path
 import pytest
 import rdflib
 
+from indicium_adapters.asb.adapter import ASBAdapter
 from indicium_adapters.asb.round_trip import (
     RoundTripResult,
     UnresolvedClaim,
+    count_shape_targeted_nodes,
     run_round_trip_check,
 )
 
@@ -123,3 +125,46 @@ def test_round_trip_counts_skills_that_declare_claims_they_do_not_list() -> None
     assert result.ok is True
     assert result.resolved_count == 0
     assert result.skills_with_unlisted_claims == 1
+
+
+LOCAL_NAMES_GRAPH = """
+@prefix indicium: <https://w3id.org/indicium/> .
+<https://w3id.org/holobiomicslab/asb-skill/s/evidence/0> a indicium:Evidence ;
+    indicium:ecoCode <http://purl.obolibrary.org/obo/ECO_textual-quotation> .
+<https://w3id.org/holobiomicslab/asb-tool/t> a indicium:SoftwareEntity .
+"""
+
+
+def test_round_trip_fails_on_a_graph_no_indicium_shape_targets() -> None:
+    """Nodes typed only with classes no shape targets make validation vacuous."""
+    graph = rdflib.Graph()
+    graph.parse(data=LOCAL_NAMES_GRAPH, format="turtle")
+    assert count_shape_targeted_nodes(graph) == 0
+    result = run_round_trip_check(UNLISTED, graph)
+    assert result.unresolved == []
+    assert result.skills_skipped == []
+    assert result.shape_targeted_nodes == 0
+    assert result.ok is False
+    assert result.render() == (
+        "FAIL - the indicium graph types no node with a class an indicium "
+        "SHACL shape targets; validating it would check nothing."
+    )
+
+
+def test_round_trip_raises_on_a_vacuous_graph_when_fail_on_missing() -> None:
+    with pytest.raises(AssertionError, match="no node with a class"):
+        run_round_trip_check(UNLISTED, rdflib.Graph(), fail_on_missing=True)
+
+
+def test_round_trip_counts_the_shape_targeted_nodes_of_the_graph() -> None:
+    result = run_round_trip_check(SLUG_LIST, _load(GRAPH_OK))
+    assert result.shape_targeted_nodes == 2
+
+
+def test_round_trip_passes_on_the_adapter_graph_of_the_collection(tmp_path: Path) -> None:
+    """The adapter's own graph types its nodes with classes the shapes target."""
+    with ASBAdapter(cache_db=tmp_path / "bt.sqlite", offline=True) as adapter:
+        graph = adapter.to_rdf_graph(FIXTURE)
+    result = run_round_trip_check(FIXTURE, graph)
+    assert result.ok is True, result.render()
+    assert result.shape_targeted_nodes == 4

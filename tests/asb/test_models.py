@@ -25,8 +25,9 @@ def test_source_paper_normalises_doi() -> None:
 
 
 def test_evidence_span_defaults_to_textual_quotation() -> None:
+    """The default is the EcoCodeAsbSubset value indicium maps to ECO:0000033."""
     e = ASBEvidenceSpan(quote="lcms data was processed with mzmine 4")
-    assert e.eco_code == "eco:textual-quotation"
+    assert e.eco_code == "textual_quotation"
 
 
 def test_tool_record_canonical_url_optional() -> None:

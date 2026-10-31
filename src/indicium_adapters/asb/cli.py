@@ -2,9 +2,10 @@
 
 Designed to be called by ``asb-skill-collections`` CI as a release-blocking
 gate. Exits 0 when every claim IRI a SKILL.md lists (frontmatter
-``claims``, or ``metadata.claims``) resolves in the supplied indicium graph
-and every listed skill was read; exits 1 (with diagnostics on stdout) when
-an IRI dangles or a listed skill was skipped.
+``claims``, or ``metadata.claims``) resolves in the supplied indicium graph,
+every listed skill was read and the graph types at least one node with a
+class an indicium SHACL shape targets; exits 1 (with diagnostics on
+stdout) otherwise.
 
 ## CI integration contract
 
@@ -16,18 +17,21 @@ an IRI dangles or a listed skill was skipped.
                   --format json
 
 Exit codes:
-- 0: all claim URIs resolve and every listed skill was read; release may
-  proceed.
-- 1: one or more URIs dangle, or a listed skill has no SKILL.md or fails
-  validation; release blocked. JSON stdout lists them.
+- 0: all claim URIs resolve, every listed skill was read and the graph has
+  a node an indicium shape targets; release may proceed.
+- 1: one or more URIs dangle, a listed skill has no SKILL.md or fails
+  validation, or no node of the graph is typed with a class an indicium
+  SHACL shape targets, so validating it would check nothing; release
+  blocked. JSON stdout lists them.
 - 2: invocation error (missing file, bad args).
 
 JSON stdout carries ``unresolved`` (``skill_slug`` and ``claim_iri`` per
 dangling reference), ``resolved_count``, ``skills_listed`` (entries under
 ``skills`` in collection.yaml), ``skills_checked`` (skills read from disk),
-``skills_skipped`` (``skill_slug`` and ``reason`` per skill not read) and
-``skills_with_unlisted_claims``. A pass with ``skills_checked`` at 0
-checked nothing.
+``skills_skipped`` (``skill_slug`` and ``reason`` per skill not read),
+``skills_with_unlisted_claims`` and ``shape_targeted_nodes`` (graph nodes
+typed with a class an indicium SHACL shape targets). A pass with
+``skills_checked`` at 0 checked nothing.
 
 A skill whose frontmatter declares ``n_claims`` above 0 but lists no claim
 IRI has nothing to check. Such skills do not fail the gate; their count is
@@ -66,6 +70,7 @@ def _emit_json(result: RoundTripResult) -> None:
                 for s in result.skills_skipped
             ],
             "skills_with_unlisted_claims": result.skills_with_unlisted_claims,
+            "shape_targeted_nodes": result.shape_targeted_nodes,
         },
         sys.stdout,
     )
@@ -87,7 +92,8 @@ def main(argv: list[str] | None = None) -> int:
         description=(
             "Verify that every claim IRI listed in a SKILL.md (frontmatter "
             "`claims`, or `metadata.claims`) of an ASB skill collection is "
-            "typed asb:Claim in an indicium graph. "
+            "typed asb:Claim in an indicium graph, and that the graph types "
+            "a node with a class an indicium SHACL shape targets. "
             "Release-blocking CI gate for asb-skill-collections."
         ),
     )

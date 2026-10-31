@@ -43,6 +43,13 @@ tag is `v0.4.0`, and no version has been published to a package index.
   `n_claims` above 0 but lists no claim IRI. `verify-claims` returns it in its JSON
   and prints a warning on stderr; it does not fail the gate. `ASBSkillRecord` reads
   `n_claims`.
+- **The round-trip gate fails on a graph that indicium's shapes would not check.**
+  `run_round_trip_check()` and `verify-claims` now fail (exit 1) when no node of the
+  indicium graph is typed with a class an indicium SHACL shape targets: validating
+  such a graph has no focus node and conforms whatever it holds. The count is
+  `RoundTripResult.shape_targeted_nodes`, returned as `shape_targeted_nodes` in the
+  `verify-claims` JSON. `shape_targeted_classes()` reads the targets from the shape
+  files indicium ships, and `count_shape_targeted_nodes()` counts a graph's nodes.
 - `tests/test_release_metadata.py`: `CITATION.cff` and `pyproject.toml` carry the
   same version, `indicium_adapters.asb.__version__` is the installed distribution
   version, this file has one Unreleased section, and `SECURITY.md` supports the
@@ -79,6 +86,28 @@ tag is `v0.4.0`, and no version has been published to a package index.
   otherwise, as the `DomainAdapter.qualifiers` contract states. The other mapper
   terms keep their local names under `INDICIUM_BASE`. No file in the current
   collections uses the old namespace, so it is not read as an alias.
+- **Evidence spans, tools and papers are typed and described with indicium's own
+  terms, so its shapes check them.** On the metabolomics v2 collection the graph
+  typed 0 of its 22,753 typed nodes with a class an indicium shape targets, and
+  `validate_graph` conformed without checking anything. An evidence span is now an
+  Evidence, `sepio:0000002` (was `indicium:Evidence`), with `indicium:eco_code`,
+  `indicium:quote_exact`, `indicium:source_doi` and `indicium:paragraph_id`. A tool
+  is a SoftwareEntity, `fabio:ComputerProgram` (was `indicium:SoftwareEntity`), with
+  its IRI in `dct:identifier`, `indicium:canonical_url` as an IRI and
+  `indicium:edam_operation` and `indicium:edam_topics`. A paper is a Source,
+  `fabio:Expression` (was `indicium:InformationSource`), with its DOI in
+  `dct:identifier` (was `cito:hasIdentifier`) and its title in `dct:title`. The v2
+  graph now has 16,894 nodes the shapes target, and it conforms.
+- `ASBEvidenceSpan.eco_code` defaults to `textual_quotation`, the EcoCodeAsbSubset
+  value indicium maps to `ECO:0000033`. The former default `eco:textual-quotation`
+  was written as `ECO_textual-quotation`, an ECO IRI that does not exist. Every
+  EcoCodeAsbSubset value maps to the ECO term indicium gives it, an `ECO:` CURIE to
+  its IRI, and any other value stays a literal that the indicium shape reports.
+- `indicium:bio_tools_id` is a string, written only when a bio.tools id is known;
+  an unresolved id is no longer written as `rdf:nil`, which the shape rejects.
+- `ASBAdapter` writes one paper node per DOI. When the records citing a paper give
+  it different titles it gets no `dct:title`, which the indicium shape allows once,
+  and the adapter warns with their count: 50 of the 498 papers of metabolomics v2.
 - Skill and tool instance IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/`
   and `.../asb-tool/` form that ASB's release code mints, now exported as
   `ASB_SKILL_BASE` and `ASB_TOOL_BASE`. `ASBAdapter` binds the `asb:` prefix to the
@@ -127,11 +156,10 @@ tag is `v0.4.0`, and no version has been published to a package index.
   `leaves/<slug>/SKILL.md`.
 
 ### Known gaps
-- Claims use the declared `asb:subject`, `asb:relation`, `asb:object`,
-  `asb:context`, `asb:qualifier` and `asb:domainQualifier`. A claim's
-  `super_pattern` and every evidence, software, source and skill term use this
-  mapper's local names under `INDICIUM_BASE` (for example `superPattern`, and
-  `exactQuote` where indicium declares `quote_exact`).
+- Claims, evidence spans, tools and papers use the classes and slots the indicium
+  shapes declare. Skills, which the indicium model does not describe, a claim's
+  `super_pattern`, the `name` of skills and tools and the skill-to-evidence link
+  `hasEvidence` use this mapper's local names under `INDICIUM_BASE`.
 - A claims-file record without `context` maps to a claim without `asb:context`,
   which the `asb:Claim` shape requires, and the shape reports a violation. ASB's
   own claims carry a context; the mapper writes it when the record has one.

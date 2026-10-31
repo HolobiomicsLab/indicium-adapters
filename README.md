@@ -124,7 +124,7 @@ Some domain packages add further keys of their own (`ontology_terms_unmatched`, 
 
 ## ASB collections and `verify-claims`
 
-`indicium_adapters.asb` (extra `asb`) reads an ASB skill collection from disk and maps it to Indicium RDF. `verify-claims` is the release gate for those collections: every claim IRI a SKILL.md lists must be typed `asb:Claim` in the Indicium graph passed to it.
+`indicium_adapters.asb` (extra `asb`) reads an ASB skill collection from disk and maps it to Indicium RDF. `verify-claims` is the release gate for those collections: every claim IRI a SKILL.md lists must be typed `asb:Claim` in the Indicium graph passed to it, and at least one node of that graph must be typed with a class an Indicium SHACL shape targets. A graph with no such node conforms to the shapes without any of it being checked.
 
 ```bash
 verify-claims --collection <collection dir> --indicium-graph <graph.ttl> [--format json]
@@ -132,8 +132,8 @@ verify-claims --collection <collection dir> --indicium-graph <graph.ttl> [--form
 
 | Exit code | Meaning |
 |---|---|
-| 0 | every claim IRI resolves and every listed skill was read |
-| 1 | a claim IRI dangles, or a listed skill has no SKILL.md or fails validation |
+| 0 | every claim IRI resolves, every listed skill was read and the graph has a node of a class an Indicium shape targets |
+| 1 | a claim IRI dangles, a listed skill has no SKILL.md or fails validation, or no node of the graph has a class an Indicium shape targets |
 | 2 | invocation error: a missing path or a bad argument |
 
 On the bundled fixture in the current collection layout:
@@ -147,7 +147,10 @@ $ verify-claims --collection tests/asb/fixtures/slug_list_collection \
                 --indicium-graph tests/asb/fixtures/indicium_graph_broken.ttl
 FAIL - 1 dangling claim URI(s):
   - skill-with-claim: https://w3id.org/holobiomicslab/asb-skill/skill-with-claim/claim/01
+FAIL - the indicium graph types no node with a class an indicium SHACL shape targets; validating it would check nothing.
 ```
+
+The broken fixture is empty, so it fails both checks.
 
 A listed skill the loader cannot read fails the gate. The claim IRIs of a skill that fails validation are still checked:
 
@@ -170,9 +173,9 @@ WARNING - 1 skill(s) declare n_claims above 0 but list no claim IRI; their claim
 OK - 0 claim(s) resolved in 1 skill(s); 1 listed, 0 skipped.
 ```
 
-The loader reads two layouts. In the current one, `collection.yaml` lists skill and tool slugs, leaf skills sit in `leaves/<slug>/SKILL.md` and tools in `tools/<slug>.yaml`. In the earlier one, the index lists mappings with a `path` or a `slug`. The JSON output carries `unresolved`, `resolved_count`, `skills_listed` (entries under `skills` in `collection.yaml`), `skills_checked` (skills read), `skills_skipped` (slug and reason per skill not read) and `skills_with_unlisted_claims`; a pass with `skills_checked` at 0 read nothing.
+The loader reads two layouts. In the current one, `collection.yaml` lists skill and tool slugs, leaf skills sit in `leaves/<slug>/SKILL.md` and tools in `tools/<slug>.yaml`. In the earlier one, the index lists mappings with a `path` or a `slug`. The JSON output carries `unresolved`, `resolved_count`, `skills_listed` (entries under `skills` in `collection.yaml`), `skills_checked` (skills read), `skills_skipped` (slug and reason per skill not read), `skills_with_unlisted_claims` and `shape_targeted_nodes` (graph nodes typed with a class an Indicium SHACL shape targets); a pass with `skills_checked` at 0 read nothing.
 
-Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from a copied string. A claim is typed `asb:Claim` with `asb:subject`, `asb:relation` and `asb:object`, plus `asb:context` when its record has a `context`; a qualifier rides `asb:qualifier` when it is a closed Bucur term and `asb:domainQualifier` otherwise. Skill and tool IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/` and `.../asb-tool/` form that ASB mints.
+Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from a copied string. A claim is typed `asb:Claim` with `asb:subject`, `asb:relation` and `asb:object`, plus `asb:context` when its record has a `context`; a qualifier rides `asb:qualifier` when it is a closed Bucur term and `asb:domainQualifier` otherwise. An evidence span is typed with Indicium's Evidence class `sepio:0000002` and carries `indicium:eco_code`, `indicium:quote_exact`, `indicium:source_doi` and `indicium:paragraph_id`; its `eco_code` defaults to `textual_quotation`, written as `ECO:0000033`. A tool is a `fabio:ComputerProgram` whose `dct:identifier` is its IRI, with `indicium:bio_tools_id` only when a bio.tools id is known. A paper is one `fabio:Expression` per DOI, with the DOI in `dct:identifier` and the title in `dct:title`; when its records give it different titles, it gets none and the adapter warns. Skill and tool IRIs keep the `https://w3id.org/holobiomicslab/asb-skill/` and `.../asb-tool/` form that ASB mints.
 
 ## Scope
 
@@ -182,7 +185,7 @@ Vocabulary bases come from `indicium` (`ASB_BASE`, `INDICIUM_BASE`), never from 
 
 Known limitations of `indicium_adapters.asb`:
 
-- Claims use the declared `asb:subject`, `asb:relation`, `asb:object`, `asb:context`, `asb:qualifier` and `asb:domainQualifier`. A claim's `super_pattern` and every evidence, software, source and skill term use this mapper's own local names under `INDICIUM_BASE` (for example `superPattern`, and `exactQuote` where indicium declares `quote_exact`).
+- Claims, evidence spans, tools and papers use the classes and slots the Indicium shapes declare. Skills, which the Indicium model does not describe, a claim's `super_pattern`, the `name` of skills and tools and the skill-to-evidence link `hasEvidence` use this mapper's own local names under `INDICIUM_BASE`.
 - A claims-file record without `context` maps to a claim without `asb:context`, which the `asb:Claim` shape requires; validation reports that violation. ASB's own claims carry a context, and the mapper writes it when the record has one.
 - Current tool records carry `repo_url`, not `canonical_url`, so the bio.tools resolver has nothing to look up for them.
 - No SKILL.md in the current collections lists a claim IRI, so `verify-claims` checks none. The metabolomics v2 collection of [asb-skill-collections](https://github.com/HolobiomicsLab/asb-skill-collections) has 5859 skills and none lists a claim IRI. The proteomics v1 and genomics v1 collections declare `n_claims` totalling 5454 across 558 skills and 34070 across 3246 skills, but list no IRI. Each passes with 0 claims resolved; on the last two, `verify-claims` warns that the declared claims are not checked.
@@ -211,7 +214,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-On this version: 119 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 91% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
+On this version: 132 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. Neither 0.5.0 nor 0.6.0 was tagged; the last tag is `v0.4.0`.
 
