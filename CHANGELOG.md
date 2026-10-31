@@ -128,6 +128,10 @@ tag is `v0.4.0`, and no version has been published to a package index.
   its default rule set. The extras install no longer falls back to a bare install.
   The `ORG_PAT` step stays until `indicium-standard` is on PyPI.
 - `uv.lock` is refreshed: it still declared `requires-python = ">=3.12"`.
+- `pyproject.toml` declares `readme = "README.md"`. The built wheel's METADATA had
+  no long description, so its package index page would have been empty; it now
+  carries the README with `Description-Content-Type: text/markdown`, and
+  `twine check --strict` passes on the wheel and the sdist.
 
 ### Fixed
 - **`verify-claims` raised `AttributeError: 'str' object has no attribute 'get'` on

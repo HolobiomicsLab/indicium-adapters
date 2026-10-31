@@ -38,3 +38,11 @@ def test_security_policy_supports_the_declared_minor_line() -> None:
     security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
     supported = re.findall(r"^\|\s*(\S+)\s*\|\s*yes\s*\|$", security, re.MULTILINE)
     assert supported == [f"{minor_line}.x"]
+
+
+def test_pyproject_declares_the_readme_as_long_description() -> None:
+    """Without it the package index page of the distribution is empty."""
+    with (ROOT / "pyproject.toml").open("rb") as fh:
+        project = tomllib.load(fh)["project"]
+    assert project.get("readme") == "README.md"
+    assert (ROOT / "README.md").is_file()

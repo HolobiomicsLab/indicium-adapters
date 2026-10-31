@@ -214,7 +214,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-On this version: 132 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
+On this version: 133 passed, 4 skipped, on Python 3.11, 3.12 and 3.13. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs the same three Python versions and fails on any ruff finding; ruff is pinned in the `dev` extra.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. Neither 0.5.0 nor 0.6.0 was tagged; the last tag is `v0.4.0`.
 
