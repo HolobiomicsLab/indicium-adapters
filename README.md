@@ -53,14 +53,15 @@ Implementations, measured with all ten installed beside this package (15 entry p
 
 ## Install
 
-The package is not on PyPI yet, and neither is its one Indicium dependency, the standard itself (distribution `indicium-standard`, import `indicium`). Both repositories follow. Until then, clone them side by side and install from the parent directory (Python 3.11 or later):
+The package is not on PyPI yet, and neither is its one Indicium dependency, the standard itself (distribution `indicium-standard`, import `indicium`); both uploads are pending. Until then, install the standard from [its repository](https://github.com/HolobiomicsLab/indicium) and this package from a clone (Python 3.11 or later):
 
 ```bash
 uv venv --python 3.11
-uv pip install ./indicium ./indicium-adapters
+uv pip install "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
+uv pip install --no-sources ./indicium-adapters
 ```
 
-Add the `asb` extra for the ASB collection mapper and the `verify-claims` command: `uv pip install "./indicium-adapters[asb]"`.
+Add the `asb` extra for the ASB collection mapper and the `verify-claims` command: `uv pip install --no-sources "./indicium-adapters[asb]"`.
 
 Depend on `indicium-standard`, never on `indicium`. The PyPI name `indicium` belongs to an unrelated key-value-store package that ships a module with the same import name.
 
@@ -217,13 +218,13 @@ uv run pytest
 uv run ruff check .
 ```
 
-On this version, locally on Python 3.14: 134 passed, 4 skipped; with `indicium-adapters-metabolomics` installed, on Python 3.11: 138 passed. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs Python 3.11, 3.12 and 3.13 and fails on any ruff finding; ruff is pinned in the `dev` extra.
+On this version, locally on Python 3.11: 137 passed, 4 skipped. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs Python 3.11, 3.12 and 3.13 and fails on any ruff finding; ruff is pinned in the `dev` extra.
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. Neither 0.5.0 nor 0.6.0 was tagged; the last tag is `v0.4.0`.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. 0.5.0 was never tagged; 0.6.0 is the first release prepared for PyPI, and [`RELEASING.md`](RELEASING.md) is its checklist.
 
 ## Related projects
 
-- Indicium standard (`indicium-standard`, import `indicium`): the claim and evidence model, its SHACL shapes and the `asb:` vocabulary base `https://w3id.org/asb#`. Repository follows.
+- Indicium standard (`indicium-standard`, import `indicium`): the claim and evidence model, its SHACL shapes and the `asb:` vocabulary base `https://w3id.org/asb#`. Repository: [HolobiomicsLab/indicium](https://github.com/HolobiomicsLab/indicium).
 - The ten domain packages in the table above. Repositories follow.
 - [Perspicacité](https://github.com/HolobiomicsLab/Perspicacite-AI) composes the installed adapters named in a request's `domains` and merges their `qualifiers` and `extraction_context()` into its claim-extraction prompt.
 - [ASB skill collections](https://github.com/HolobiomicsLab/asb-skill-collections): the registry whose collections `indicium_adapters.asb` maps to Indicium RDF and `verify-claims` gates.

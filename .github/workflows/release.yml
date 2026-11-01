@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  # Removed once indicium-standard 2.0.0 is on PyPI, together with every step
+  # that uses it: the dependency then resolves from the index.
+  INDICIUM_GIT: "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Check tag, version and release date
+        run: uv run --no-project --python 3.12 python scripts/check_release.py --tag "$GITHUB_REF_NAME" --notes-output "$RUNNER_TEMP/release-notes.md"
+
+      - name: Warn when indicium-standard is not on PyPI
+        run: |
+          curl -sSf -o /dev/null https://pypi.org/pypi/indicium-standard/2.0.0/json \
+            || echo "::warning::indicium-standard 2.0.0 is not on PyPI; pip cannot install indicium-adapters from PyPI until it is"
+
+      - name: Install, lint and test
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python --no-sources "$INDICIUM_GIT"
+          uv pip install --python .venv/bin/python --no-sources -e ".[dev,asb]"
+          .venv/bin/ruff check .
+          .venv/bin/pytest
+
+      - name: Build and check distributions
+        run: |
+          rm -rf dist
+          uv build --no-sources
+          uvx --from twine==7.0.0 twine check --strict dist/*
+
+      - name: Check installed wheel
+        run: |
+          uv venv --python 3.11 .wheel-env
+          # Until indicium-standard 2.0.0 is on PyPI: install it from the pinned
+          # commit, then the wheel with --no-deps. Afterwards install the wheel alone.
+          uv pip install --python .wheel-env/bin/python --no-sources "$INDICIUM_GIT"
+          uv pip install --python .wheel-env/bin/python --no-deps dist/*.whl
+          uv pip check --python .wheel-env/bin/python
+          .wheel-env/bin/python -c "import sys, indicium, indicium_adapters; from importlib.metadata import version; v = version('indicium-adapters'); assert 'v' + v == sys.argv[1], v; print('indicium-adapters', v, 'indicium-standard', version('indicium-standard'))" "$GITHUB_REF_NAME"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-distributions
+          path: dist/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/indicium-adapters
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-distributions
+          path: dist
+
+      - name: Publish to PyPI with Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-distributions
+          path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: release-notes
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          body_path: release-notes/release-notes.md
+          files: dist/*
