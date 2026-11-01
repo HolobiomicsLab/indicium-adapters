@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [0.6.0] - YYYY-MM-DD
 
-`pyproject.toml` declares 0.6.0. Neither 0.5.0 nor 0.6.0 was tagged: the last
-tag is `v0.4.0`, and no version has been published to a package index.
+First release published to PyPI. 0.5.0 was never tagged or published, and its
+changes ship in this release; the tag before this one is `v0.4.0`. The release
+step replaces the `YYYY-MM-DD` placeholder with the release date (`RELEASING.md`).
 
 ### Added
 - `ClassificationVocabularyProvider`, an opt-in protocol for an adapter that
@@ -52,8 +53,14 @@ tag is `v0.4.0`, and no version has been published to a package index.
   files indicium ships, and `count_shape_targeted_nodes()` counts a graph's nodes.
 - `tests/test_release_metadata.py`: `CITATION.cff` and `pyproject.toml` carry the
   same version, `indicium_adapters.asb.__version__` is the installed distribution
-  version, this file has one Unreleased section, and `SECURITY.md` supports the
-  `pyproject.toml` major.minor line.
+  version, this file has a section for that version and at most one Unreleased
+  section, and `SECURITY.md` supports the `pyproject.toml` major.minor line.
+- `.github/workflows/release.yml`: on a `v*` tag, checks the tag, the versions and
+  the changelog date (`scripts/check_release.py`), runs lint and tests, builds the
+  sdist and the wheel with `uv build`, runs `twine check --strict`, installs the
+  wheel in a clean environment and imports it, publishes to PyPI with Trusted
+  Publishing from the `pypi` environment, and creates the GitHub release with the
+  two distributions. `RELEASING.md` holds the checklist.
 
 ### Changed
 - **The dependency is the renamed `indicium-standard>=2.0.0`** (was `indicium>=1.7`),
@@ -128,7 +135,9 @@ tag is `v0.4.0`, and no version has been published to a package index.
 - CI tests Python 3.11, 3.12 and 3.13. `ruff check .` now fails the job on any
   finding; ruff is pinned to 0.17.3 in the `dev` extra because each release widens
   its default rule set. The extras install no longer falls back to a bare install.
-  The `ORG_PAT` step stays until `indicium-standard` is on PyPI.
+  CI installs `indicium-standard` from the public repository, pinned to commit
+  500dd82, and no longer needs the `ORG_PAT` token; the pin moves to PyPI once
+  2.0.0 is published.
 - `uv.lock` is refreshed: it still declared `requires-python = ">=3.12"`.
 - `pyproject.toml` declares `readme = "README.md"`. The built wheel's METADATA had
   no long description, so its package index page would have been empty; it now

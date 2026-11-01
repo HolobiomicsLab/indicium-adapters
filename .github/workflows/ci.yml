@@ -18,23 +18,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # This step and the git install of indicium below go away once
-      # indicium-standard is published on PyPI: pip then resolves it from
-      # the index like any other dependency, and ORG_PAT is no longer needed.
-      - name: Configure git auth for private cross-repo installs
-        env:
-          GH_TOKEN: ${{ secrets.ORG_PAT }}
-        run: |
-          # Rewrite https://github.com/ to embed the PAT so pip-install-from-git
-          # can clone the private HolobiomicsLab/indicium repo.
-          # Requires repo secret ORG_PAT — fine-grained PAT with Contents: Read
-          # on HolobiomicsLab/{indicium, indicium-adapters}.
-          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # indicium isn't on PyPI yet; install from git
-          pip install git+https://github.com/HolobiomicsLab/indicium.git@main
+          # The pin moves to PyPI (indicium-standard>=2.0.0) once 2.0.0 is published.
+          pip install "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
           # .[asb] brings httpx + pydantic + pyyaml for the src/indicium_adapters/asb
           # submodule that tests/asb exercises; .[dev] brings pytest, pytest-cov,
           # pyshacl and the pinned ruff.

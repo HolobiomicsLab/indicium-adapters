@@ -8,3 +8,5 @@ build/
 .coverage
 htmlcov/
 *.so
+.venv/
+.wheel-env/
