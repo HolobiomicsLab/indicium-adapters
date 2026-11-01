@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
+import sys
 import tomllib
 from importlib.metadata import version
 from pathlib import Path
@@ -56,15 +58,56 @@ def test_release_check_rejects_another_tag() -> None:
         _check_release().release_notes(ROOT, "v0.0.0", allow_unreleased=True)
 
 
-def test_release_check_rejects_the_date_placeholder(tmp_path: Path) -> None:
+def _write_release_metadata(root: Path, changelog_date: str) -> None:
     for name in ("pyproject.toml", "CITATION.cff"):
-        (tmp_path / name).write_text((ROOT / name).read_text(encoding="utf-8"))
+        (root / name).write_text((ROOT / name).read_text(encoding="utf-8"))
     version_ = _pyproject_version()
-    (tmp_path / "CHANGELOG.md").write_text(f"# Changelog\n\n## [{version_}] - YYYY-MM-DD\n\n- x\n")
+    (root / "CHANGELOG.md").write_text(
+        f"# Changelog\n\n## [{version_}] - {changelog_date}\n\n- x\n",
+        encoding="utf-8",
+    )
+
+
+def test_release_check_rejects_the_date_placeholder(tmp_path: Path) -> None:
+    _write_release_metadata(tmp_path, "YYYY-MM-DD")
+    tag = f"v{_pyproject_version()}"
     check = _check_release()
     with pytest.raises(ValueError, match="not a date"):
-        check.release_notes(tmp_path, f"v{version_}")
-    assert check.release_notes(tmp_path, f"v{version_}", allow_unreleased=True) == "- x"
+        check.release_notes(tmp_path, tag)
+    assert check.release_notes(tmp_path, tag, allow_unreleased=True) == "- x"
+
+
+@pytest.mark.parametrize("invalid_date", ["20261101", "2026-W44-7"])
+def test_release_check_rejects_non_extended_iso_dates(
+    tmp_path: Path, invalid_date: str
+) -> None:
+    _write_release_metadata(tmp_path, invalid_date)
+    with pytest.raises(ValueError, match="not a date"):
+        _check_release().release_notes(tmp_path, f"v{_pyproject_version()}")
+
+
+def test_release_check_writes_release_notes(tmp_path: Path) -> None:
+    tag = f"v{_pyproject_version()}"
+    notes_output = tmp_path / "release-notes.md"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "check_release.py"),
+            "--tag",
+            tag,
+            "--allow-unreleased",
+            "--notes-output",
+            str(notes_output),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == f"Release metadata verified for {tag}\n"
+    expected_notes = _check_release().release_notes(ROOT, tag, allow_unreleased=True)
+    assert notes_output.read_text(encoding="utf-8") == f"{expected_notes}\n"
 
 
 def test_security_policy_supports_the_declared_minor_line() -> None:

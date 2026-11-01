@@ -26,6 +26,8 @@ def release_notes(root, tag, allow_unreleased=False):
         raise ValueError(f"No changelog section '## [{version}] - <date>'")
     date = heading.group(1)
     if date != "YYYY-MM-DD" or not allow_unreleased:
+        if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date) is None:
+            raise ValueError(f"Changelog date for {version} is not a date: {date}")
         try:
             datetime.date.fromisoformat(date)
         except ValueError:

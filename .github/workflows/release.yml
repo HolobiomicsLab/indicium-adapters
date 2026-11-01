@@ -8,11 +8,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # Removed once indicium-standard 2.0.0 is on PyPI, together with every step
-  # that uses it: the dependency then resolves from the index.
-  INDICIUM_GIT: "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,15 +19,16 @@ jobs:
       - name: Check tag, version and release date
         run: uv run --no-project --python 3.12 python scripts/check_release.py --tag "$GITHUB_REF_NAME" --notes-output "$RUNNER_TEMP/release-notes.md"
 
-      - name: Warn when indicium-standard is not on PyPI
+      - name: Require indicium-standard on PyPI
         run: |
-          curl -sSf -o /dev/null https://pypi.org/pypi/indicium-standard/2.0.0/json \
-            || echo "::warning::indicium-standard 2.0.0 is not on PyPI; pip cannot install indicium-adapters from PyPI until it is"
+          curl -sSf -o /dev/null https://pypi.org/pypi/indicium-standard/2.0.0/json || {
+            echo "::error::indicium-standard 2.0.0 is not on PyPI yet; release after it"
+            exit 1
+          }
 
       - name: Install, lint and test
         run: |
           uv venv --python 3.12 .venv
-          uv pip install --python .venv/bin/python --no-sources "$INDICIUM_GIT"
           uv pip install --python .venv/bin/python --no-sources -e ".[dev,asb]"
           .venv/bin/ruff check .
           .venv/bin/pytest
@@ -46,10 +42,7 @@ jobs:
       - name: Check installed wheel
         run: |
           uv venv --python 3.11 .wheel-env
-          # Until indicium-standard 2.0.0 is on PyPI: install it from the pinned
-          # commit, then the wheel with --no-deps. Afterwards install the wheel alone.
-          uv pip install --python .wheel-env/bin/python --no-sources "$INDICIUM_GIT"
-          uv pip install --python .wheel-env/bin/python --no-deps dist/*.whl
+          uv pip install --python .wheel-env/bin/python --no-sources dist/*.whl
           uv pip check --python .wheel-env/bin/python
           .wheel-env/bin/python -c "import sys, indicium, indicium_adapters; from importlib.metadata import version; v = version('indicium-adapters'); assert 'v' + v == sys.argv[1], v; print('indicium-adapters', v, 'indicium-standard', version('indicium-standard'))" "$GITHUB_REF_NAME"
 

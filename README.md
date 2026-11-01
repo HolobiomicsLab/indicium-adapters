@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/brand/indicium-mark-dark.svg">
-    <img src="docs/assets/brand/indicium-mark.svg" alt="Indicium mark: a record sheet with three claim lines bound by a round seal" width="96">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/HolobiomicsLab/indicium-adapters/main/docs/assets/brand/indicium-mark-dark.svg">
+    <img src="https://raw.githubusercontent.com/HolobiomicsLab/indicium-adapters/main/docs/assets/brand/indicium-mark.svg" alt="Indicium mark: a record sheet with three claim lines bound by a round seal" width="96">
   </picture>
 </p>
 
@@ -53,15 +53,25 @@ Implementations, measured with all ten installed beside this package (15 entry p
 
 ## Install
 
-The package is not on PyPI yet, and neither is its one Indicium dependency, the standard itself (distribution `indicium-standard`, import `indicium`); both uploads are pending. Until then, install the standard from [its repository](https://github.com/HolobiomicsLab/indicium) and this package from a clone (Python 3.11 or later):
+Install the core package from PyPI with Python 3.11 or later (0.6.0 is the first PyPI release; before its upload, use the source install below once `indicium-standard` 2.0.0 is on PyPI):
 
 ```bash
-uv venv --python 3.11
-uv pip install "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
-uv pip install --no-sources ./indicium-adapters
+python -m pip install indicium-adapters
 ```
 
-Add the `asb` extra for the ASB collection mapper and the `verify-claims` command: `uv pip install --no-sources "./indicium-adapters[asb]"`.
+This pulls the `indicium-standard` distribution from PyPI. Add the `asb` extra for the ASB collection mapper and the `verify-claims` command:
+
+```bash
+python -m pip install "indicium-adapters[asb]"
+```
+
+To install from source instead, clone the public repository and install from its root:
+
+```bash
+git clone https://github.com/HolobiomicsLab/indicium-adapters.git
+cd indicium-adapters
+python -m pip install .
+```
 
 Depend on `indicium-standard`, never on `indicium`. The PyPI name `indicium` belongs to an unrelated key-value-store package that ships a module with the same import name.
 
@@ -209,7 +219,7 @@ soil-science = "soil_adapters.soil:SoilAdapter"
 
 ## Development
 
-Clone `indicium` and `indicium-adapters` side by side: `[tool.uv.sources]` points `indicium-standard` at `../indicium`, so `uv lock` and `uv sync` fail in a lone clone.
+The sibling path in `[tool.uv.sources]` supports contributors who clone `indicium` and `indicium-adapters` side by side:
 
 ```bash
 cd indicium-adapters
@@ -218,9 +228,17 @@ uv run pytest
 uv run ruff check .
 ```
 
-On this version, locally on Python 3.11: 137 passed, 4 skipped. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs Python 3.11, 3.12 and 3.13 and fails on any ruff finding; ruff is pinned in the `dev` extra.
+In a lone public clone, ignore that sibling source on both sync and run commands until the lock is regenerated after the `indicium-standard` 2.0.0 upload:
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](CHANGELOG.md) for the history. 0.5.0 was never tagged; 0.6.0 is the first release prepared for PyPI, and [`RELEASING.md`](RELEASING.md) is its checklist.
+```bash
+uv sync --no-sources --extra dev --extra asb
+uv run --no-sources pytest
+uv run --no-sources ruff check .
+```
+
+On this version, locally on Python 3.11: 141 passed, 4 skipped. The four skipped tests need `indicium-adapters-metabolomics` installed. Coverage is 92% against the 85% gate; `asb/cli.py` is left out of the measure. CI runs Python 3.11, 3.12 and 3.13 and fails on any ruff finding; ruff is pinned in the `dev` extra.
+
+See [`CONTRIBUTING.md`](https://github.com/HolobiomicsLab/indicium-adapters/blob/main/CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](https://github.com/HolobiomicsLab/indicium-adapters/blob/main/CHANGELOG.md) for the history. 0.5.0 was never tagged; 0.6.0 is the first release prepared for PyPI, and [`RELEASING.md`](https://github.com/HolobiomicsLab/indicium-adapters/blob/main/RELEASING.md) is its checklist.
 
 ## Related projects
 
@@ -231,8 +249,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow and [`CHANGELOG.md`](C
 
 ## Citation
 
-Cite the package with [`CITATION.cff`](CITATION.cff); GitHub shows it under "Cite this repository". It carries no DOI yet.
+Cite the package with [`CITATION.cff`](https://github.com/HolobiomicsLab/indicium-adapters/blob/main/CITATION.cff); GitHub shows it under "Cite this repository". It carries no DOI yet.
 
 ## Licence
 
-MIT, see [`LICENSE`](LICENSE).
+MIT, see [`LICENSE`](https://github.com/HolobiomicsLab/indicium-adapters/blob/main/LICENSE).

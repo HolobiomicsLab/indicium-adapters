@@ -4,20 +4,25 @@ Thanks for your interest!
 
 ## Setup
 
-Clone `indicium` and `indicium-adapters` side by side. `indicium-standard`
-is not on PyPI yet, and `[tool.uv.sources]` points it at `../indicium`.
+The sibling path in `[tool.uv.sources]` supports contributors who clone
+`indicium` and `indicium-adapters` side by side:
 
 ```bash
 cd indicium-adapters
 uv sync --extra dev --extra asb
 ```
 
+In a lone public clone, use `uv sync --no-sources --extra dev --extra asb`
+until the lock is regenerated after the `indicium-standard` 2.0.0 upload.
+Keep `--no-sources` on later `uv run` commands too.
+
 ## Development workflow
 
 1. Create a feature branch from `main`.
 2. Write tests first (TDD). The suite is `pytest`.
-3. Run `uv run ruff check .` and `uv run pytest` before pushing. CI fails
-   on any ruff finding.
+3. Run `uv run ruff check .` and `uv run pytest` before pushing. In a lone
+   clone, pass `--no-sources` to both `uv run` commands. CI fails on any ruff
+   finding.
 4. Open a PR.
 
 ## Scope
