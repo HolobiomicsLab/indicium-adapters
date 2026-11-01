@@ -5,15 +5,15 @@ steps in order. The state recorded here was measured on 2026-11-01.
 
 | | State on 2026-11-01 |
 |---|---|
-| Repository `HolobiomicsLab/indicium-adapters` | private; branches `main` and `fix/release-readiness-2026-10-30` (merged as #6); four pull-request refs |
+| Repository `HolobiomicsLab/indicium-adapters` | public; `fix/release-readiness-2026-10-30` was merged as #6 |
 | Tags and GitHub releases | tag `v0.4.0`, no release; 0.5.0 was never tagged |
 | PyPI and TestPyPI, `indicium-adapters` | 404 (name free) |
-| `indicium-standard` 2.0.0 on PyPI | 404; CI and `release.yml` install it from commit 500dd82 of the public repository |
+| `indicium-standard` 2.0.0 on PyPI | 404; CI keeps a temporary Git pin, while `release.yml` now stops until the PyPI version exists |
 | GitHub environments | `pypi` with a tag-only deployment policy (`v*`); the required-reviewer rule is added after the public switch (step 4), the plan refuses it on a private repository |
 | History scan (step 1) | private names: 0 over all refs; secret formats: 0 over all refs |
 | GitHub Pages | none, and none needed: the repository has no documentation site |
 
-Two steps cannot be undone: pushing the tag (step 5), which starts the PyPI upload, and
+Two steps cannot be undone: pushing the tag (step 6), which starts the PyPI upload, and
 the upload itself. PyPI never accepts the same version twice.
 
 ## Before you start
@@ -25,8 +25,6 @@ On `main`, with this branch merged, in a clean environment that mirrors CI:
 
 ```bash
 uv venv --python 3.11 /tmp/adapters-check
-uv pip install --python /tmp/adapters-check/bin/python --no-sources \
-  "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
 uv pip install --python /tmp/adapters-check/bin/python --no-sources -e ".[dev,asb]"
 /tmp/adapters-check/bin/ruff check .
 /tmp/adapters-check/bin/pytest -q
@@ -119,7 +117,27 @@ echo '{"reviewers":[{"type":"User","id":22830047}],"deployment_branch_policy":{"
 
 Expected: the response lists one required reviewer.
 
-## 5. Date the changelog, tag v0.6.0 and push the tag
+## 5. Finish the dependency transition after the upload
+
+Do this immediately after `indicium-standard` 2.0.0 appears on PyPI and before
+tagging this repository:
+
+1. Confirm `https://pypi.org/pypi/indicium-standard/2.0.0/json` returns 200.
+   `release.yml` now makes this a hard gate, resolves the test environment from
+   PyPI and installs the built wheel with its dependencies in a clean environment.
+2. Remove the temporary `indicium-standard @ git+...` install from
+   `.github/workflows/ci.yml`. The editable project install then resolves
+   `indicium-standard>=2.0.0` from the index, matching public installations.
+3. Remove `[tool.uv.sources]` from `pyproject.toml` and run `uv lock`. The sibling
+   path exists for contributors with both checkouts; a lone public clone uses
+   `uv sync --no-sources` until this lock refresh is committed.
+4. Delete the repository secret `ORG_PAT`, which nothing uses any more.
+
+The CI pin, uv source and lock remain unchanged in this preparation branch so CI
+can stay green before the dependency upload. The release tag waits for this
+follow-up to be merged.
+
+## 6. Date the changelog, tag v0.6.0 and push the tag
 
 The `## [0.6.0]` heading of `CHANGELOG.md` carries the placeholder `YYYY-MM-DD`, which
 `scripts/check_release.py` rejects without `--allow-unreleased`. Replace only the
@@ -152,7 +170,7 @@ reviewer); job `github-release` creates the GitHub release. All three end green.
   publisher on PyPI and re-run the failed job: `gh run rerun <run-id> --failed`.
 - If only job `github-release` fails, PyPI already has the version; re-run that job.
 
-## 6. Verify the release
+## 7. Verify the release
 
 ```bash
 gh release view v0.6.0 -R HolobiomicsLab/indicium-adapters --json assets --jq '.assets[].name'
@@ -169,13 +187,4 @@ then `0.6.0`. The page `https://pypi.org/project/indicium-adapters/` shows 0.6.0
 A version lives in two files, `version` in `pyproject.toml` and `version:` in
 `CITATION.cff`, and in a `CHANGELOG.md` section `## [X.Y.Z] - YYYY-MM-DD`.
 `tests/test_release_metadata.py` fails while they disagree. Update the supported line in
-`SECURITY.md` on a minor bump. Then run "Before you start" and steps 5 and 6.
-
-## Follow-ups after indicium-standard 2.0.0 is on PyPI
-
-1. Remove the pinned git install of `indicium-standard` from `.github/workflows/ci.yml`
-   and the `INDICIUM_GIT` variable and its steps from `.github/workflows/release.yml`;
-   the wheel check then installs the wheel alone, with its dependencies.
-2. Remove `[tool.uv.sources]` from `pyproject.toml` and run `uv lock`.
-3. Replace the install section of `README.md` with `pip install indicium-adapters`.
-4. Delete the repository secret `ORG_PAT`, which nothing uses any more.
+`SECURITY.md` on a minor bump. Then run "Before you start" and steps 6 and 7.

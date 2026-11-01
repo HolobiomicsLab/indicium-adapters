@@ -11,7 +11,7 @@ stdout) otherwise.
 
 ``asb-skill-collections`` CI calls this script as:
 
-    pip install indicium-adapters
+    pip install "indicium-adapters[asb]"
     verify-claims --collection <path-to-collection> \\
                   --indicium-graph <path-to-graph.ttl> \\
                   --format json
@@ -48,11 +48,29 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from importlib import import_module
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from rdflib import Graph
 
-from indicium_adapters.asb.round_trip import RoundTripResult, run_round_trip_check
+if TYPE_CHECKING:
+    from indicium_adapters.asb.round_trip import RoundTripResult
+
+
+ASB_EXTRA_ERROR = (
+    'error: missing ASB dependencies; install with pip install "indicium-adapters[asb]"'
+)
+
+
+def _has_asb_dependencies() -> bool:
+    """Return whether every dependency supplied by the ASB extra imports."""
+    for module_name in ("httpx", "pydantic", "yaml"):
+        try:
+            import_module(module_name)
+        except ModuleNotFoundError:
+            return False
+    return True
 
 
 def _load_graph(path: Path) -> Graph:
@@ -118,6 +136,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Output format. CI should use 'json' for machine parsing.",
     )
     args = parser.parse_args(argv)
+
+    if not _has_asb_dependencies():
+        print(ASB_EXTRA_ERROR, file=sys.stderr)
+        return 2
+
+    from indicium_adapters.asb.round_trip import run_round_trip_check
 
     if not args.collection.exists():
         print(f"error: collection not found: {args.collection}", file=sys.stderr)
