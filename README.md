@@ -53,7 +53,7 @@ Implementations, measured with all ten installed beside this package (15 entry p
 
 ## Install
 
-Install the core package from PyPI with Python 3.11 or later (0.6.0 is the first PyPI release; before its upload, use the source install below once `indicium-standard` 2.0.0 is on PyPI):
+Install the core package from PyPI with Python 3.11 or later (0.6.0 is the first PyPI release):
 
 ```bash
 python -m pip install indicium-adapters

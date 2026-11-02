@@ -21,9 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Keep this pin until indicium-standard 2.0.0 is on PyPI. The follow-up
-          # in RELEASING.md then removes it so CI resolves from the index.
-          pip install "indicium-standard @ git+https://github.com/HolobiomicsLab/indicium.git@500dd828369fd0431154456cb1debfdfcaef779d"
+          # indicium-standard resolves from PyPI (2.0.0 and later).
           # .[asb] brings httpx + pydantic + pyyaml for the src/indicium_adapters/asb
           # submodule that tests/asb exercises; .[dev] brings pytest, pytest-cov,
           # pyshacl and the pinned ruff.
