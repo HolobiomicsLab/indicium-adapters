@@ -242,7 +242,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", marker = "extra == 'asb'", specifier = ">=0.27" },
-    { name = "indicium-standard", editable = "../indicium" },
+    { name = "indicium-standard", specifier = ">=2.0.0" },
     { name = "pydantic", marker = "extra == 'asb'", specifier = ">=2.6" },
     { name = "pyshacl", marker = "extra == 'dev'", specifier = ">=0.26" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
@@ -256,35 +256,15 @@ provides-extras = ["dev", "asb"]
 [[package]]
 name = "indicium-standard"
 version = "2.0.0"
-source = { editable = "../indicium" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyshacl" },
     { name = "rdflib" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "linkml", marker = "extra == 'codegen'", specifier = ">=1.8" },
-    { name = "linkml-runtime", marker = "extra == 'codegen'", specifier = ">=1.8" },
-    { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5" },
-    { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.25" },
-    { name = "pydantic", specifier = ">=2.0" },
-    { name = "pyshacl", specifier = ">=0.26" },
-    { name = "pyyaml", marker = "extra == 'astra'", specifier = ">=6.0" },
-    { name = "pyyaml", marker = "extra == 'codegen'", specifier = ">=6.0" },
-    { name = "rdflib", specifier = ">=7.0" },
-]
-provides-extras = ["codegen", "astra", "docs"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "linkml", specifier = ">=1.8" },
-    { name = "linkml-runtime", specifier = ">=1.8" },
-    { name = "mkdocs-material", specifier = ">=9.5" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.25" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/9c/bc/d6afea82433a76a239ca8fa0b66ee17d4f34b2a871f5e8365c82ff609d4f/indicium_standard-2.0.0.tar.gz", hash = "sha256:c71006e86cd46d96cf03dda7c265fc8ffd19ef633fde3e57e1403de958cf7aa4", size = 59432, upload-time = "2026-11-02T18:25:44.799Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/22/abe9169fd7eda167397546fd90547cd078ff9f364158d5472c4101e40741/indicium_standard-2.0.0-py3-none-any.whl", hash = "sha256:5aec742bad6953234a1c038fbb51dd2f1e210fe5a34ad41f8803347ccb0c103e", size = 62579, upload-time = "2026-11-02T18:25:43.528Z" },
 ]
 
 [[package]]

@@ -7,11 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.6.0] - YYYY-MM-DD
+## [0.6.0] - 2026-11-02
 
 First release published to PyPI. 0.5.0 was never tagged or published, and its
-changes ship in this release; the tag before this one is `v0.4.0`. The release
-step replaces the `YYYY-MM-DD` placeholder with the release date (`RELEASING.md`).
+changes ship in this release; the tag before this one is `v0.4.0`.
 
 ### Added
 - `ClassificationVocabularyProvider`, an opt-in protocol for an adapter that

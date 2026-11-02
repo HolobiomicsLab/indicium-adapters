@@ -59,9 +59,6 @@ verify-claims = "indicium_adapters.asb.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/indicium_adapters"]
 
-[tool.uv.sources]
-indicium-standard = { path = "../indicium", editable = true }
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --strict-markers --cov=indicium_adapters --cov-report=term-missing --cov-fail-under=85"
