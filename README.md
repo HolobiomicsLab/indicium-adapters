@@ -228,7 +228,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-In a lone public clone, ignore that sibling source on both sync and run commands until the lock is regenerated after the `indicium-standard` 2.0.0 upload:
+In a lone public clone, ignore that sibling source on both sync and run commands until the lock is regenerated after the `indicium-standard` 2.0.0 release:
 
 ```bash
 uv sync --no-sources --extra dev --extra asb
